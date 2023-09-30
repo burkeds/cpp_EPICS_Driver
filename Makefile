@@ -12,13 +12,13 @@ LIBS = Com ca
 
 # Targets
 TARGET = testEpicsProxy
-SRCS = $(wildcard $(SRC_DIR)/*.cpp) testEpicsProxy.cpp
-OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(SRC_DIR)/%.o,$(SRCS)) src/EpicsProxy.o
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(SRC_DIR)/%.o,$(filter-out testEpicsProxy.cpp,$(SRCS))) src/EpicsProxy.o
 
 # Build rules
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS) testEpicsProxy.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(addprefix -L,$(LIB_DIRS)) $(addprefix -l,$(LIBS))
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
