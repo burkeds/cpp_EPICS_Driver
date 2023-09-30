@@ -27,7 +27,6 @@
 #include <any>
 #include <stdexcept>
 #include <iostream>
-#include <errlog.h>
 #include <map>
 #include <algorithm>
 #include <string>

@@ -10,8 +10,9 @@
 
 #include <cadef.h>
 #include <db_access.h>
-
-//#define SEVCHK(CODE, MSG) \
+//This is an attempt to redefine SEVCHK so that it prints to the error variable. It doesn't work.
+/*
+#define SEVCHK(CODE, MSG) \
     do { \
         if ( (CODE) != ECA_NORMAL ) { \
             errlogSevPrintf(errlogMajor, MSG " failed with status %d\n", (CODE)); \
@@ -19,6 +20,7 @@
             throw std::runtime_error(MSG " failed with status " + std::to_string((CODE))); \
         } \
     } while (0)
+*/
 
 class EpicsProxy {
 public:
