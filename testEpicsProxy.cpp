@@ -5,7 +5,7 @@
 
 int main() {
     try {
-        EpicsProxy proxy;
+        epicsproxy::EpicsProxy proxy;
         proxy.connect();
 
         //Get PV name from user

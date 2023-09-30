@@ -22,6 +22,8 @@
     } while (0)
 */
 
+namespace epicsproxy {
+
 class EpicsProxy {
 public:
     EpicsProxy(std::string m_deviceName = "");
@@ -66,4 +68,7 @@ private:
     void _put(chid m_chid, TypeValue value, chtype m_field_type);
     void _put_string(chid m_chid, std::string value, chtype m_field_type);
 };
+
+} // namespace epicsproxy
+
 #endif // EPICSPROXY_H

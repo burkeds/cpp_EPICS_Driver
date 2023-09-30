@@ -33,8 +33,6 @@
 
 #include "EpicsProxy.h"
 
-namespace epicsproxy {
-
 class EpicsProxy {
 
 public: 
@@ -336,6 +334,4 @@ private:
         SEVCHK(ca_put(m_field_type, m_chid, value.c_str()), ("Failed to put value to PV " + std::string(m_pvName)).c_str());
         SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + std::string(m_pvName)).c_str());
     }
-    };
-
-} // namespace epicsproxy
+};
