@@ -3,9 +3,11 @@
 
 #include "EpicsProxy.h"
 
+using namespace epicsproxy;
+
 int main() {
     try {
-        epicsproxy::EpicsProxy proxy;
+        EpicsProxy proxy("test");
         proxy.connect();
 
         //Get PV name from user
@@ -23,7 +25,7 @@ int main() {
         
         //Get new value from user
         std::string newValue;
-        std::cout << "Enter the new value: ";
+        std::cout << "Enter the new value of the same data type: ";
         std::cin >> newValue;
 
         //Get new data type from user

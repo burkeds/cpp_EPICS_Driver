@@ -13,7 +13,7 @@ LIBS = Com ca
 # Targets
 TARGET = testEpicsProxy
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(SRC_DIR)/%.o,$(filter-out testEpicsProxy.cpp,$(SRCS))) src/EpicsProxy.o
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(SRC_DIR)/%.o,$(filter-out testEpicsProxy.cpp,$(SRCS)))
 
 # Build rules
 all: $(TARGET)
