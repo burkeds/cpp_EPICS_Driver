@@ -10,8 +10,6 @@
 #include <cadef.h>
 #include <db_access.h>
 
-namespace epics {
-
 class PV {
     private:
     std::string error;
@@ -70,7 +68,5 @@ class PV {
     //Write PVs
     void write(std::any m_value, std::string m_dataType);
 };
-
-} // namespace epics
-
+;
 #endif // PV_H

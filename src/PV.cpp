@@ -1,7 +1,5 @@
 #include "PV.h"
 
-using namespace epics;
-
 PV::PV(std::string m_deviceName, std::string m_fieldName){
     deviceName = m_deviceName;
     pvName = deviceName + m_fieldName;

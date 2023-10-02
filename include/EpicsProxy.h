@@ -9,6 +9,7 @@
 
 #include <cadef.h>
 #include <db_access.h>
+#include <cstdarg>
 
 #include "PV.h"
 //This is an attempt to redefine SEVCHK so that it prints to the error variable. It doesn't work.
@@ -23,18 +24,16 @@
     } while (0)
 */
 
-namespace epics {
-
 class EpicsProxy {
     //Class Variables
-    private:
+private:
     std::string error;
     std::string deviceName;
     std::vector<PV> pvList;
 
 public:
     //Constructor and destructor
-    EpicsProxy();
+    EpicsProxy(){;};
     ~EpicsProxy();
 
     void init(std::string deviceName, std::string pvName, ...);
@@ -53,7 +52,5 @@ public:
     std::any read_pv(std::string m_fieldName);
     void write_pv(std::string m_fieldName, std::any m_value, std::string m_dataType);
 };
-
-} // namespace epics
-
+;
 #endif // EPICSPROXY_H

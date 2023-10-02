@@ -26,9 +26,7 @@
 
 #include "EpicsProxy.h"
 
-using namespace epics;
-
-void EpicsProxy::init(std::string deviceName, std::string pvName, ...) {
+void EpicsProxy::init(std::string m_deviceName, std::string pvName, ...) {
     //Initialize the EPICS context
     SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
 
@@ -39,8 +37,8 @@ void EpicsProxy::init(std::string deviceName, std::string pvName, ...) {
         pvList.push_back(PV(deviceName, pvName));
         pvName = va_arg(args, char*);
     }
+    va_end(args);
 }
-
 
 EpicsProxy::~EpicsProxy() {
     //Clear all channels
