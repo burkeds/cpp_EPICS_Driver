@@ -2,34 +2,20 @@
 #include <any>
 
 #include "EpicsProxy.h"
-#include "callbacks.h"
 
 using namespace epicsproxy;
 
 int main() {
     try {
-        EpicsProxy proxy("test");
-        proxy.connect();
-        proxy.pv("INSTRUMENT");
-        proxy.pv("sans:galilMotor[guidehall_galil]:D-.VAL");
+        //List of PVs to create
+        std::string pvName = std::string(".VAL");
 
-        chid* m_chid1 = proxy.get_pv("INSTRUMENT");
-        chid* m_chid2 = proxy.get_pv("sans:galilMotor[guidehall_galil]:D-.VAL");
+        //Initialize the EPICS context
+        EpicsProxy proxy;
+        proxy.init("test", pvName, NULL);
         
-        
-        //Read the value
-        std::any value1 = proxy.read_pv(m_chid1);
-        std::cout << "Value: " << std::any_cast<std::string>(value1) << std::endl;
-        //Read the value
-        std::any value2 = proxy.read_pv(m_chid2);
-        std::cout << "Value: " << std::any_cast<double>(value2) << std::endl;
-
-        //Write a new value
-        proxy.write_pv(m_chid1, std::any(std::string("Test")), "A40_c");
-
-        //Read the value again
-        value1 = proxy.read_pv(m_chid1);
-        std::cout << "Value: " << std::any_cast<std::string>(value1) << std::endl;
+        //Read
+        proxy.read();
 
         proxy.clear_all_channels();
         proxy.disconnect();
