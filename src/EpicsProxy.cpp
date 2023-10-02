@@ -12,8 +12,8 @@
  * ```
  * EpicsProxy proxy("my_device"); // Where my_device is a nickname for the device
  * proxy.connect();
- * channelID_1 = proxy.pv("pvName1");
- * channelID_2 = proxy.pv("pvName2");
+ * channelID_1 = pv("pvName1");
+ * channelID_2 = pv("pvName2");
  * std::any value = proxy.read_pv("pvName1");
  * proxy.write_pv("pvName1", 3.14, 'd');
  * proxy.monitor_pv(channelID, my_callback, callback); @note Do not write a new data type to a PV that is being monitored
@@ -64,19 +64,18 @@ void EpicsProxy::clear_all_channels() {
 }
 
 chid* EpicsProxy::get_pv(std::string m_pvName) {
-    // Search the chid list for the channel
-    for (auto const& chid : m_chidList) {
-        if (std::string(ca_name(*chid)) == m_pvName) {
-            return chid;
-        }
-        else {
-            error = "Channel for PV " + m_pvName + " not found\n";
-            throw std::runtime_error("Channel for PV " + m_pvName + " not found");
-        }
-    }   
+    //Search the name of each chid in the chid list for the requested PV name and return the chid if found
+    auto it = std::find_if(m_chidList.begin(), m_chidList.end(), [m_pvName](chid* chid) {return std::string(ca_name(*chid)) == m_pvName;});
+    if (it != m_chidList.end()) {
+        return *it;
+    } else {
+        error = "PV " + m_pvName + " not found\n";
+        throw std::runtime_error("PV " + m_pvName + " not found");
+    }
 }
 
-void EpicsProxy::pv(std::string m_pvName) {
+chid* EpicsProxy::pv(std::string m_pvName) {
+
     //Create channel a new chid
     chid* m_chid = new chid;
     
@@ -90,12 +89,13 @@ void EpicsProxy::pv(std::string m_pvName) {
         throw std::runtime_error("Failed to create channel for PV " + m_pvName);
     }
 
-    //Append to the chid list of not apready present
-    if (std::find(m_chidList.begin(), m_chidList.end(), m_chid) == m_chidList.end()) {
+    //Append to chid list if it does not share a name with another member of the list
+    if (std::find_if(m_chidList.begin(), m_chidList.end(), [m_pvName](chid* chid) {return std::string(ca_name(*chid)) == m_pvName;}) == m_chidList.end()) {
         m_chidList.push_back(m_chid);
     } else {
         delete m_chid;
     }
+    return m_chidList.back();
 }
 
 std::vector<std::string> EpicsProxy::get_pv_list() {
@@ -103,6 +103,7 @@ std::vector<std::string> EpicsProxy::get_pv_list() {
     for (auto const& chid : m_chidList) {
         pvList.push_back(std::string(ca_name(*chid)));
     }
+    return pvList;
 }
 
 evid* EpicsProxy::monitor_pv(chid* m_chid, void (*callback)(struct event_handler_args args)) {
@@ -128,6 +129,7 @@ evid* EpicsProxy::monitor_pv(chid* m_chid, void (*callback)(struct event_handler
     } else {
         delete pEventID;
     }
+    return m_eventIDList.back();
 }
 
 void EpicsProxy::unmonitor_all() {

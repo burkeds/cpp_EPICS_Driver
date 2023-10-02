@@ -85,7 +85,7 @@ public:
     // Create and retrieve PVs
     std::string get_pv_name(chid* m_chid) {return std::string(ca_name(*m_chid));};
     chid* get_pv(std::string m_pvName);
-    void pv(std::string m_pvName);   
+    chid* pv(std::string m_pvName);   
 
     // Monitor PVs
     evid* monitor_pv(chid* m_chid, void (*callback)(struct event_handler_args args));
