@@ -12,8 +12,8 @@
  * ```
  * EpicsProxy proxy("my_device"); // Where my_device is a nickname for the device
  * proxy.connect();
- * channelID_1 = proxy.get_pv("pvName1");
- * channelID_2 = proxy.get_pv("pvName2");
+ * channelID_1 = proxy.pv("pvName1");
+ * channelID_2 = proxy.pv("pvName2");
  * std::any value = proxy.read_pv("pvName1");
  * proxy.write_pv("pvName1", 3.14, 'd');
  * proxy.monitor_pv(channelID, my_callback, callback); @note Do not write a new data type to a PV that is being monitored
@@ -21,157 +21,152 @@
  * @note The allowed data types are: double('t'), float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
  * @note Arrays are not supported in this version of EpicsProxy
  * @note The EpicsProxy class requires the EPICS library to be installed on the system and linked with the application.
- * @version 1.0.0
+ * @version 1.1
  */
 
 #include "EpicsProxy.h"
 
 using namespace epicsproxy;
 
+
+//Public functions
 EpicsProxy::~EpicsProxy() {
-    //Get list of all chids and clear each channel
-    std::vector<chid> chidList = get_chid_list();
-    for (auto const& chid : chidList) {
-        _clear_channel(chid);
-    }
-    // Destroy the context
+    //Unmonitor all PVs
+    unmonitor_all();
+    //Clear all channels
+    clear_all_channels();
+
+    //Destroy the EPICS context
     disconnect();
+
+    //Delete all chids and eventIDs
+    for (auto const& chid : m_chidList) {
+        delete chid;
+    }
+    m_chidList.clear();
+
+    for (auto const& eventID : m_eventIDList) {
+        delete eventID;
+    }
+    m_eventIDList.clear();
 }
 
-chid EpicsProxy::get_pv(std::string m_pvName) {
-    chid m_chid;
-    SEVCHK(ca_create_channel(m_pvName.c_str(), NULL, NULL, 20, &m_chid), ("Failed to create channel for PV " + m_pvName).c_str());
-    SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + m_pvName).c_str());
+void EpicsProxy::connect() {
+        SEVCHK(ca_context_create(ca_disable_preemptive_callback), "ca_context_create");
+        SEVCHK(ca_add_exception_event(exceptionCallback, NULL), "ca_add_exception_event");
+        };
 
+void EpicsProxy::clear_all_channels() {
+    //Get list of all chids and clear each channel
+    for (auto const& chid : m_chidList) {
+        _clear_channel(chid);
+    }
+}
+
+chid* EpicsProxy::get_pv(std::string m_pvName) {
+    // Search the chid list for the channel
+    for (auto const& chid : m_chidList) {
+        if (std::string(ca_name(*chid)) == m_pvName) {
+            return chid;
+        }
+        else {
+            error = "Channel for PV " + m_pvName + " not found\n";
+            throw std::runtime_error("Channel for PV " + m_pvName + " not found");
+        }
+    }   
+}
+
+void EpicsProxy::pv(std::string m_pvName) {
+    //Create channel a new chid
+    chid* m_chid = new chid;
+    
+    SEVCHK(ca_create_channel(m_pvName.c_str(), NULL, NULL, 20, m_chid), ("Failed to create channel for PV " + m_pvName).c_str());
+    SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + m_pvName).c_str());
+    
     // Check that the channel was created
     if (m_chid == NULL) {
         error = "Failed to create channel for PV " + m_pvName + "\n";
+        delete m_chid;
         throw std::runtime_error("Failed to create channel for PV " + m_pvName);
     }
 
-    // Check that the channel is connected
-    if (ca_state(m_chid) != cs_conn) {
-        error = "Channel for PV " + m_pvName + " is not connected\n";
-        throw std::runtime_error("Channel for PV " + m_pvName + " is not connected");
+    //Append to the chid list of not apready present
+    if (std::find(m_chidList.begin(), m_chidList.end(), m_chid) == m_chidList.end()) {
+        m_chidList.push_back(m_chid);
+    } else {
+        delete m_chid;
     }
-
-    // Add m_chid as a key to the map of chids to eventIDs if not already present
-    if (m_chidEventIDMap.find(m_chid) == m_chidEventIDMap.end()) {
-        m_chidEventIDMap[m_chid] = std::vector<evid>();
-    }
-    return m_chid;
-}
-
-std::vector<chid> EpicsProxy::get_chid_list() {
-    //Get the keys of m_chidEventIDMap and return as a vector
-    std::vector<chid> chidList;
-    std::map<chid, std::vector<evid>>::iterator it;
-    for (it = m_chidEventIDMap.begin(); it != m_chidEventIDMap.end(); it++) {
-        chidList.push_back(it->first);
-    }
-    return chidList;
 }
 
 std::vector<std::string> EpicsProxy::get_pv_list() {
-    std::vector<chid> chidList = get_chid_list();
     std::vector<std::string> pvList;
-    for (auto const& chid : chidList) {
-        std::string pvName = ca_name(chid);
-        if (pvName.find(deviceName) != std::string::npos) {
-            pvList.push_back(pvName);
-        }
+    for (auto const& chid : m_chidList) {
+        pvList.push_back(std::string(ca_name(*chid)));
     }
-    if (pvList.empty()) {
-        error = "No PVs found for device " + deviceName + "\n";
-    }
-    return pvList;
-}  
+}
 
-evid EpicsProxy::monitor_pv(chid m_chid, void (*callback)(struct event_handler_args args)) {
-    //Check that the channel is connected
-    if (ca_state(m_chid) != cs_conn) {
-        error = "Channel for PV " + std::string(ca_name(m_chid)) + " is not connected\n";
-        throw std::runtime_error("Channel for PV " + std::string(ca_name(m_chid)) + " is not connected");
+evid* EpicsProxy::monitor_pv(chid* m_chid, void (*callback)(struct event_handler_args args)) {
+    //Check that the ca_state is conn or prev_conn
+    if (!((ca_state(*m_chid) == cs_conn) || (ca_state(*m_chid) == cs_prev_conn ))) {
+        error = "Channel for PV " + std::string(ca_name(*m_chid)) + " is not connected\n";
+        throw std::runtime_error("Channel for PV " + std::string(ca_name(*m_chid)) + " is not connected");
     }
     
-    //Check if the chid is already in the map, if so, return the first event ID in the vector
-    if (m_chidEventIDMap.find(m_chid) != m_chidEventIDMap.end()) {
-        return m_chidEventIDMap[m_chid][0];
-    }
-    
-    evid m_eventID;
-    SEVCHK(ca_create_subscription(ca_field_type(m_chid), 0, m_chid, DBE_VALUE, callback, NULL, &m_eventID), "ca_create_subscription");
+    evid* pEventID = new evid;
+    SEVCHK(ca_create_subscription(ca_field_type(*m_chid), 0, *m_chid, DBE_VALUE, callback, pEventID, pEventID), "ca_create_subscription");
     SEVCHK(ca_pend_io(5.0), "ca_pend_io");
 
     //Check that the event ID was created
-    if (m_eventID == NULL) {
-        error = "Failed to create event ID for PV " + std::string(ca_name(m_chid)) + "\n";
-        throw std::runtime_error("Failed to create event ID for PV " + std::string(ca_name(m_chid)));
+    if (*pEventID == NULL) {
+        error = "Failed to create event ID for PV " + std::string(ca_name(*m_chid)) + "\n";
+        throw std::runtime_error("Failed to create event ID for PV " + std::string(ca_name(*m_chid)));
     }
 
-    //Append the event ID to the vector if it is not already present
-    if (std::find(m_chidEventIDMap[m_chid].begin(), m_chidEventIDMap[m_chid].end(), m_eventID) == m_chidEventIDMap[m_chid].end()) {
-        m_chidEventIDMap[m_chid].push_back(m_eventID);
+    //Append to the eventID list if not already present
+    if (std::find(m_eventIDList.begin(), m_eventIDList.end(), pEventID) == m_eventIDList.end()) {
+        m_eventIDList.push_back(pEventID);
+    } else {
+        delete pEventID;
     }
 }
 
-void EpicsProxy::unmonitor_pv(evid m_eventID) {
-    //Search map for chid associated with event ID
-    std::map<chid, std::vector<evid>>::iterator it;
-    chid m_chid;
-    for (it = m_chidEventIDMap.begin(); it != m_chidEventIDMap.end(); it++) {
-        std::vector<evid> eventIDList = it->second;
-        if (std::find(eventIDList.begin(), eventIDList.end(), m_eventID) != eventIDList.end()) {
-            m_chid = it->first;
-            break;
-        }
+void EpicsProxy::unmonitor_all() {
+    for (auto const& eventID : m_eventIDList) {
+        _unmonitor(eventID);
     }
-    
+}
 
-    //Destroy the event ID. This will also unmonitor the PV
-    SEVCHK(ca_clear_subscription(m_eventID), "ca_clear_subscription");
+//Private funtions
+void EpicsProxy::_unmonitor(evid* m_eventID) {
+    //Check that the event ID is valid
+    if (*m_eventID == NULL) {
+        error = "Invalid event ID\n";
+        throw std::runtime_error("Invalid event ID");
+    }
+    //Unmonitor the event ID
+    SEVCHK(ca_clear_subscription(*m_eventID), "ca_clear_subscription");
     SEVCHK(ca_pend_io(5.0), "ca_pend_io");
-
-    //Check that the event ID was destroyed
-    if (m_eventID != NULL) {
-        std::string m_pvName = ca_name(m_chid);
-        error = "Failed to destroy event ID for PV " + std::string(m_pvName) + "\n";
-        throw std::runtime_error("Failed to destroy event ID for PV " + std::string(m_pvName));
-    }
-
-    //Remove the event ID from the map but keep the chid
-    std::vector<evid> eventIDList = m_chidEventIDMap[m_chid];
-    eventIDList.erase(std::remove(eventIDList.begin(), eventIDList.end(), m_eventID), eventIDList.end());
-    m_chidEventIDMap[m_chid] = eventIDList;
 }
 
-void EpicsProxy::_clear_channel(chid m_chid) {
-    //First check to see if there are event IDs associated with the chid
-    //If so, unmonitor the event ID
-    if (m_chidEventIDMap.find(m_chid) != m_chidEventIDMap.end()) {
-        std::vector<evid> eventIDList = m_chidEventIDMap[m_chid];
-        for (auto const& eventID : eventIDList) {
-            unmonitor_pv(eventID);
-        }
+void EpicsProxy::_clear_channel(chid* m_chid) {
+    //Check that the chid is valid
+    if (m_chid == NULL) {
+        error = "Invalid channel ID\n";
+        throw std::runtime_error("Invalid channel ID");
     }
+
     //Clear the channel
-    SEVCHK(ca_clear_channel(m_chid), "ca_clear_channel");
-    SEVCHK(ca_pend_io(5.0), "ca_pend_io");
+    ca_clear_channel(*m_chid);
+    ca_pend_io(5.0);
 
-    //Check that the channel was cleared
-    if (m_chid != NULL) {
-        error = "Failed to clear channel for PV " + std::string(ca_name(m_chid)) + "\n";
-        throw std::runtime_error("Failed to clear channel for PV " + std::string(ca_name(m_chid)));
-    }
-
-    //Remove the chid from the map
-    m_chidEventIDMap.erase(m_chid);
+    //Remove the chid from the chid list
+    m_chidList.erase(std::remove(m_chidList.begin(), m_chidList.end(), m_chid), m_chidList.end());
 }
 
-std::any EpicsProxy::_read_pv(chid m_chid) {
+std::any EpicsProxy::_read_pv(chid* m_chid) {
     std::any pv_value;
-    chtype field_type = ca_field_type(m_chid);
-    const char* m_pvName = ca_name(m_chid);
+    chtype field_type = ca_field_type(*m_chid);
+    const char* m_pvName = ca_name(*m_chid);
     //Check that the field type is supported
     if (std::find(allowed_types.begin(), allowed_types.end(), field_type) == allowed_types.end()) {
         error = "Unsupported data type. The supported data types are: d, f, t, s, h, A40_c, l\n";
@@ -179,7 +174,7 @@ std::any EpicsProxy::_read_pv(chid m_chid) {
     }
 
     //Check the element count
-    if (ca_element_count(m_chid) != 1) {
+    if (ca_element_count(*m_chid) != 1) {
         error = "The element count for PV " + std::string(m_pvName) + " is not 1\n";
         throw std::runtime_error("The element count for PV " + std::string(m_pvName) + " is not 1");
     }        
@@ -205,26 +200,27 @@ std::any EpicsProxy::_read_pv(chid m_chid) {
 }
 
 template<typename TypeValue>
-TypeValue EpicsProxy::_get(chid m_chid) {
+TypeValue EpicsProxy::_get(chid* m_chid) {
     TypeValue value;
-    std::string m_pvName = ca_name(m_chid);
-    short m_field_type = ca_field_type(m_chid);
-    SEVCHK(ca_get(m_field_type, m_chid, &value), ("Failed to get value from PV " + m_pvName).c_str());
+    std::string m_pvName = ca_name(*m_chid);
+    short m_field_type = ca_field_type(*m_chid);
+    SEVCHK(ca_get(m_field_type, *m_chid, &value), ("Failed to get value from PV " + m_pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + m_pvName).c_str());
     return value;
 }
 
-std::string EpicsProxy::_get_string(chid m_chid) {
+std::string EpicsProxy::_get_string(chid* m_chid) {
     dbr_string_t pValue;
-    const char* m_pvName = ca_name(m_chid);
-    SEVCHK(ca_get(DBR_STRING, m_chid, &pValue), ("Failed to get value from PV " + std::string(m_pvName)).c_str());
+    const char* m_pvName = ca_name(*m_chid);
+    SEVCHK(ca_get(DBR_STRING, *m_chid, &pValue), ("Failed to get value from PV " + std::string(m_pvName)).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + std::string(m_pvName)).c_str());
     return std::string(static_cast<const char*>(pValue));
 }
 
-void EpicsProxy::_write_pv(chid m_chid, std::any value, std::string m_dataType) {
+void EpicsProxy::_write_pv(chid* m_chid, std::any value, std::string m_dataType) {
+    
     //Check that the value is a supported field type
-    if (std::find(allowed_types.begin(), allowed_types.end(), ca_field_type(m_chid)) == allowed_types.end()) {
+    if (std::find(allowed_types.begin(), allowed_types.end(), ca_field_type(*m_chid)) == allowed_types.end()) {
         error = "Unsupported data type. The supported data types are: d, f, t, s, h, A40_c, l\n";
         throw std::runtime_error("Unsupported data type. The supported data types are: d, f, t, s, h, A40_c, l");
     }
@@ -237,10 +233,9 @@ void EpicsProxy::_write_pv(chid m_chid, std::any value, std::string m_dataType) 
         value.type() == typeid(std::vector<dbr_char_t>) ||
         value.type() == typeid(std::vector<std::string>) ||
         value.type() == typeid(std::vector<dbr_long_t>)) {
-        error = "The value for PV " + std::string(ca_name(m_chid)) + " is an array\n";
-        throw std::runtime_error("The value for PV " + std::string(ca_name(m_chid)) + " is an array. Arrays are not supported.");
+        error = "The value for PV " + std::string(ca_name(*m_chid)) + " is an array\n";
+        throw std::runtime_error("The value for PV " + std::string(ca_name(*m_chid)) + " is an array. Arrays are not supported.");
     }
-    
     if (m_dataType == "d") {
         _put<dbr_double_t>(m_chid, std::any_cast<dbr_double_t>(value), DBR_DOUBLE); 
     } else if (m_dataType == "f") {
@@ -261,14 +256,14 @@ void EpicsProxy::_write_pv(chid m_chid, std::any value, std::string m_dataType) 
 }
 
 template<typename TypeValue>
-void EpicsProxy::_put(chid mChid, TypeValue value, chtype m_field_type) {
-    std::string m_pvName = ca_name(mChid);
-    SEVCHK(ca_put(m_field_type, mChid, &value), ("Failed to put value to PV " + m_pvName).c_str());
+void EpicsProxy::_put(chid* mChid, TypeValue value, chtype m_field_type) {
+    std::string m_pvName = ca_name(*mChid);
+    SEVCHK(ca_put(m_field_type, *mChid, &value), ("Failed to put value to PV " + m_pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + m_pvName).c_str());
 }
 
-void EpicsProxy::_put_string(chid m_chid, std::string value, chtype m_field_type) {
-    std::string m_pvName = ca_name(m_chid);
-    SEVCHK(ca_put(m_field_type, m_chid, value.c_str()), ("Failed to put value to PV " + std::string(m_pvName)).c_str());
+void EpicsProxy::_put_string(chid* m_chid, std::string value, chtype m_field_type) {
+    std::string m_pvName = ca_name(*m_chid);
+    SEVCHK(ca_put(m_field_type, *m_chid, value.c_str()), ("Failed to put value to PV " + std::string(m_pvName)).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + std::string(m_pvName)).c_str());
 }

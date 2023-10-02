@@ -11,6 +11,8 @@
 
 #include <cadef.h>
 #include <db_access.h>
+
+#include "callbacks.h"
 //This is an attempt to redefine SEVCHK so that it prints to the error variable. It doesn't work.
 /*
 #define SEVCHK(CODE, MSG) \
@@ -26,9 +28,11 @@
 namespace epicsproxy {
 
 class EpicsProxy {
+    //Class Variables
     private:
     std::string deviceName;
-    std::map<chid, std::vector<evid>> m_chidEventIDMap;
+    std::vector<chid*> m_chidList;
+    std::vector<evid*> m_eventIDList;
     std::vector<short> allowed_types = {DBR_DOUBLE,
                                         DBR_FLOAT,
                                         DBR_ENUM,
@@ -38,17 +42,21 @@ class EpicsProxy {
                                         DBR_LONG};
     std::string error;
 
-    void _clear_channel(chid m_chid);
+    //Cleanup functions
+    void _unmonitor(evid* m_eventID);
+    void _clear_channel(chid* m_chid);
 
-    std::any _read_pv(chid m_chid);
+    //Reading PVs
+    std::any _read_pv(chid* m_chid);
     template<typename TypeValue>
-    TypeValue _get(chid m_chid);
-    std::string _get_string(chid m_chid);
+    TypeValue _get(chid* m_chid);
+    std::string _get_string(chid* m_chid);
 
-    void _write_pv(chid m_chid, std::any m_value, std::string m_dataType);
+    //Writing PVs
+    void _write_pv(chid* m_chid, std::any m_value, std::string m_dataType);
     template<typename TypeValue>
-    void _put(chid m_chid, TypeValue value, chtype m_field_type);
-    void _put_string(chid m_chid, std::string value, chtype m_field_type);
+    void _put(chid* m_chid, TypeValue value, chtype m_field_type);
+    void _put_string(chid* m_chid, std::string value, chtype m_field_type);
 
 public:
     //Constructor and destructor
@@ -59,36 +67,36 @@ public:
     std::string get_error() {return error;};
     std::string get_device_name() {return deviceName;};
     std::vector<short> get_allowed_types() {return allowed_types;};
-
-    void connect() {SEVCHK(ca_context_create(ca_enable_preemptive_callback), "ca_context_create");};
-
-    void disconnect() {ca_context_destroy();};
-    
-
-    void clear_channel(std::string m_pvName) {
-        chid m_chid = get_pv(m_pvName);
-        _clear_channel(m_chid);
-    };
-    void clear_channel(chid m_chid) {_clear_channel(m_chid);};
-
-    chid get_pv(std::string m_pvName);
-    std::vector<chid> get_chid_list();
+    std::vector<chid*> get_chid_list() {return m_chidList;};
+    std::vector<evid*> get_event_id_list() {return m_eventIDList;};
     std::vector<std::string> get_pv_list();
 
-    evid monitor_pv(chid m_chid, void (*callback)(struct event_handler_args args));
-    void unmonitor_pv(evid m_eventID);
-
-    std::any read_pv(std::string m_pvName) {
-        chid m_chid = get_pv(m_pvName);
-        return _read_pv(m_chid);
-    };
-    std::any read_pv(chid m_chid){return _read_pv(m_chid);};
+    // Connect/disconnect from EPICS context
+    void connect();
+    void disconnect() {ca_context_destroy();};
     
-    void write_pv(std::string m_pvName, std::any m_value, std::string m_dataType) {
-        chid m_chid = get_pv(m_pvName);
-        _write_pv(m_chid, m_value, m_dataType);
-    }
-    void write_pv(chid m_chid, std::any m_value, std::string m_dataType) {_write_pv(m_chid, m_value, m_dataType);};
+    //Cleanup
+    void clear_channel(std::string m_pvName) {_clear_channel(get_pv(m_pvName));};
+    void clear_channel(chid* m_chid) {_clear_channel(m_chid);};
+    void clear_all_channels();
+    void unmonitor(evid* m_eventID) {_unmonitor(m_eventID);};
+    void unmonitor_all();
+    
+    // Create and retrieve PVs
+    std::string get_pv_name(chid* m_chid) {return std::string(ca_name(*m_chid));};
+    chid* get_pv(std::string m_pvName);
+    void pv(std::string m_pvName);   
+
+    // Monitor PVs
+    evid* monitor_pv(chid* m_chid, void (*callback)(struct event_handler_args args));
+    
+    // Read PVs
+    std::any read_pv(std::string m_pvName) {return _read_pv(get_pv(m_pvName));};
+    std::any read_pv(chid* m_chid){return _read_pv(m_chid);};
+    
+    //Write PVs
+    void write_pv(std::string m_pvName, std::any m_value, std::string m_dataType) {_write_pv(get_pv(m_pvName), m_value, m_dataType);};
+    void write_pv(chid* m_chid, std::any m_value, std::string m_dataType) {_write_pv(m_chid, m_value, m_dataType);};
 };
 
 } // namespace epicsproxy
