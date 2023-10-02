@@ -26,18 +26,19 @@
 
 #include "EpicsProxy.h"
 
-void EpicsProxy::init(std::string m_deviceName, std::string pvName, ...) {
+using namespace epics;
+
+void EpicsProxy::init(std::string m_deviceName, std::vector<std::string>> m_pvNames) {
     //Initialize the EPICS context
     SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
 
+    //Set the device name
+    deviceName = m_deviceName;
+
     //Create the PVs
-    va_list args;
-    va_start(args, pvName);
-    while (pvName != NULL) {
-        pvList.push_back(PV(deviceName, pvName));
-        pvName = va_arg(args, char*);
+    for (auto m_pvName : m_pvNames) {
+        pvList.push_back(PV(deviceName, m_pvName));
     }
-    va_end(args);
 }
 
 EpicsProxy::~EpicsProxy() {
@@ -70,8 +71,9 @@ void EpicsProxy::write_pv(std::string m_fieldName, std::any m_value, std::string
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-std::any EpicsProxy::read_pv(std::string m_fieldName) {
-    for (auto m_pv : pvList) {
+std::any EpicsProxy::read_pv(std::string m_fieldName)
+{
+	for (auto m_pv : pvList) {
         if (m_pv.get_name() == m_fieldName) {
             m_pv.read();
             return m_pv.get_value();

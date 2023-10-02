@@ -24,6 +24,10 @@
     } while (0)
 */
 
+namespace epics {
+    class EpicsProxy;
+} // namespace epics
+
 class EpicsProxy {
     //Class Variables
 private:
@@ -36,7 +40,7 @@ public:
     EpicsProxy(){;};
     ~EpicsProxy();
 
-    void init(std::string deviceName, std::string pvName, ...);
+    void init(std::string deviceName, std::vector<std::string> pvNames);
 
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
