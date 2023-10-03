@@ -28,7 +28,27 @@
 
 namespace epics{
 
-void EpicsProxy::init(std::string m_deviceName, std::vector<std::string> m_pvNames) {
+void EpicsProxy::init(std::string m_deviceName,
+                      std::vector<std::string> m_pvNames,
+                      std::string ca_addr_list,
+                      std::string ca_auto_addr_list,
+                      double ca_conn_tmo,
+                      double ca_beacon_period,
+                      double ca_repeater_port,
+                      double ca_server_port,
+                      double ca_max_array_bytes,
+                      double ts_min_west) {
+    //Configure channel access
+    setenv("EPICS_CA_ADDR_LIST", ca_addr_list.c_str(), 1);
+    setenv("EPICS_CA_AUTO_ADDR_LIST", ca_auto_addr_list.c_str(), 1);
+    setenv("EPICS_CA_CONN_TMO", std::to_string(ca_conn_tmo).c_str(), 1);
+    setenv("EPICS_CA_BEACON_PERIOD", std::to_string(ca_beacon_period).c_str(), 1);
+    setenv("EPICS_CA_REPEATER_PORT", std::to_string(ca_repeater_port).c_str(), 1);
+    setenv("EPICS_CA_SERVER_PORT", std::to_string(ca_server_port).c_str(), 1);
+    setenv("EPICS_CA_MAX_ARRAY_BYTES", std::to_string(ca_max_array_bytes).c_str(), 1);
+    setenv("EPICS_TS_MIN_WEST", std::to_string(ts_min_west).c_str(), 1);
+
+
     //Initialize the EPICS context
     SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
 
@@ -41,14 +61,12 @@ void EpicsProxy::init(std::string m_deviceName, std::vector<std::string> m_pvNam
         pvList.push_back(m_pv);
     }
 }
+EpicsProxy::EpicsProxy(std::string name) {
+    //Set the device name
+    axisName = name;
+}
 
 EpicsProxy::~EpicsProxy() {
-    std::cout << "Destroying EpicsProxy" << std::endl;
-    //Clear all channels
-    clear_all_channels();
-
-    
-
     //Destruct the contents of all pointers in pvList
     for (PV* m_pv : pvList) {
         delete m_pv;
@@ -59,51 +77,62 @@ EpicsProxy::~EpicsProxy() {
     ca_context_destroy();
 }
 
-void EpicsProxy::clear_all_channels() {
-    std::cout << "Clearing all channels" << std::endl;
-    for (PV* m_pv : pvList) {
-        
-        std::cout << "Clearing channel for PV ASK " << m_pv->get_name() << std::endl;
-        pend();
-        std::cout << "Calling clear_channel" << std::endl;
-        //m_pv->clear_channel();
-        std::cout << "Finishing clear_channel" << std::endl;
-    }
-}
-
-void EpicsProxy::read_all() {
-    for (PV* m_pv : pvList) {
-        m_pv->read();
-    }
-    pend();
-}
-
-void EpicsProxy::write_pv(std::string m_fieldName, std::any m_value, std::string m_dataType) {
+template<typename TypeValue>
+void EpicsProxy::write_pv(std::string m_fieldName, TypeValue m_value) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            m_pv->write(m_value, m_dataType);
-            pend();
+            m_pv->write<TypeValue>(m_value);
             return;
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-void EpicsProxy::read_pv(std::string m_fieldName) {
-	    for (PV* m_pv : pvList) {
+void EpicsProxy::write_pv_string(std::string m_fieldName, std::string m_value) {
+    for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            m_pv->read();
+            m_pv->write_string(m_value);
+            return;
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-std::any EpicsProxy::get_pv_value(std::string m_fieldName) {
+
+
+template<typename TypeValue>
+TypeValue EpicsProxy::read_pv(std::string m_fieldName) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            return m_pv->get_value();
+            return m_pv->read<TypeValue>();
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
+
+std::string EpicsProxy::read_pv_string(std::string m_fieldName) {
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            return m_pv->read_string();
+        }
+    }
+    throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
+//Instantiate the template function for allowed types
+    template double EpicsProxy::read_pv<double>(std::string m_fieldName);
+    template float EpicsProxy::read_pv<float>(std::string m_fieldName);
+    template int EpicsProxy::read_pv<int>(std::string m_fieldName);
+    template short EpicsProxy::read_pv<short>(std::string m_fieldName);
+    template char EpicsProxy::read_pv<char>(std::string m_fieldName);
+    template long EpicsProxy::read_pv<long>(std::string m_fieldName);
+
+    template void EpicsProxy::write_pv<double>(std::string m_fieldName, double m_value);
+    template void EpicsProxy::write_pv<float>(std::string m_fieldName, float m_value);
+    template void EpicsProxy::write_pv<int>(std::string m_fieldName, int m_value);
+    template void EpicsProxy::write_pv<short>(std::string m_fieldName, short m_value);
+    template void EpicsProxy::write_pv<char>(std::string m_fieldName, char m_value);
+    template void EpicsProxy::write_pv<long>(std::string m_fieldName, long m_value);
+    
+
 }

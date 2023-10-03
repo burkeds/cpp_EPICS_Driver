@@ -33,33 +33,51 @@ private:
     std::string deviceName;
     std::vector<PV*> pvList;
     std::string axisName;
+    std::vector<short> allowed_types = {DBR_DOUBLE,
+                                        DBR_FLOAT,
+                                        DBR_ENUM,
+                                        DBR_SHORT,
+                                        DBR_CHAR,
+                                        DBR_STRING,
+                                        DBR_LONG};
 
 public:
     //Constructor and destructor
-    EpicsProxy(std::string name){
-        axisName = name;
-    };
+    EpicsProxy(std::string name);
     ~EpicsProxy();
 
-    void init(std::string deviceName, std::vector<std::string> pvNames);
+    void init(std::string m_deviceName,
+              std::vector<std::string> m_pvNames,
+              std::string ca_addr_list,
+              std::string ca_auto_addr_list,
+              double ca_conn_tmo,
+              double ca_beacon_period,
+              double ca_repeater_port,
+              double ca_server_port,
+              double ca_max_array_bytes,
+              double ts_min_west);
 
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
 
-    // Pend
-    void pend() {SEVCHK(ca_pend_io(5.0), "Failed to pend");}
-
-    //Cleanup
-    void clear_all_channels();
-
     //Access functions
     std::string get_device_name() {return deviceName;};
+    std::string get_axis_name() {return axisName;};
+    std::vector<short> get_allowed_types() {return allowed_types;};
 
-    //Read and write
-    void read_all();
-    void read_pv(std::string m_fieldName);
-    std::any get_pv_value(std::string m_fieldName);
-    void write_pv(std::string m_fieldName, std::any m_value, std::string m_dataType);
+    //Read and write functions
+    template<typename TypeValue>
+    void write_pv(std::string m_fieldName, TypeValue m_value);
+    
+    void write_pv_string(std::string m_fieldName, std::string m_value);
+
+    template<typename TypeValue>
+    TypeValue read_pv(std::string m_fieldName);
+    
+    
+
+    std::string read_pv_string(std::string m_fieldName);
+    
 };
 }
 #endif

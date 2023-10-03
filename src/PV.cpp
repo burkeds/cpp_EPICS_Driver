@@ -5,90 +5,103 @@ PV::PV(std::string m_deviceName, std::string m_fieldName){
     deviceName = m_deviceName;
     pvName = deviceName + fieldName;
     _create_channel();
-    pend();
 }
 
-void PV::write(std::any wval, std::string m_dataType) { 
-    //Check that the value is a supported field type
-    if (wval.type() != typeid(dbr_double_t) &&
-        wval.type() != typeid(dbr_float_t) &&
-        wval.type() != typeid(dbr_enum_t) &&
-        wval.type() != typeid(dbr_short_t) &&
-        wval.type() != typeid(dbr_char_t) &&
-        wval.type() != typeid(std::string) &&
-        wval.type() != typeid(dbr_long_t)) {
-        error = "The value for PV " + std::string(ca_name(channel)) + " is not a supported field type\n";
-        throw std::runtime_error("The value for PV " + std::string(ca_name(channel)) + " is not a supported field type. The supported field types are: d, f, t, s, h, A40_c, l");
-    }
-
-    //Check that the value is not an array
-    if (wval.type() == typeid(std::vector<dbr_double_t>) ||
-        wval.type() == typeid(std::vector<dbr_float_t>) ||
-        wval.type() == typeid(std::vector<dbr_enum_t>) ||
-        wval.type() == typeid(std::vector<dbr_short_t>) ||
-        wval.type() == typeid(std::vector<dbr_char_t>) ||
-        wval.type() == typeid(std::vector<std::string>) ||
-        wval.type() == typeid(std::vector<dbr_long_t>)) {
-        error = "The value for PV " + std::string(ca_name(channel)) + " is an array\n";
-        throw std::runtime_error("The value for PV " + std::string(ca_name(channel)) + " is an array. Arrays are not supported.");
-    }
-    if (m_dataType == "d") {
-        _put<dbr_double_t>(std::any_cast<dbr_double_t>(value), DBR_DOUBLE); 
-    } else if (m_dataType == "f") {
-        _put<dbr_float_t>(std::any_cast<dbr_float_t>(value), DBR_FLOAT);
-    } else if (m_dataType == "t") {
-        _put<dbr_enum_t>(std::any_cast<dbr_enum_t>(value), DBR_ENUM);
-    } else if (m_dataType == "s") {
-        _put<dbr_short_t>(std::any_cast<dbr_short_t>(value), DBR_SHORT);
-    } else if (m_dataType == "h") {
-        _put<dbr_char_t>(std::any_cast<dbr_char_t>(value), DBR_CHAR);
-    } else if (m_dataType == "A40_c") {
-        _put_string(std::any_cast<std::string>(value));
-    } else if (m_dataType == "l") {
-        _put<dbr_long_t>(std::any_cast<dbr_long_t>(value), DBR_LONG);
-    } else {
-        throw std::runtime_error("Unsupported data type. The supported data types are: d, f, t, s, h, A40_c, l");
-    }
+void PV::clear_channel(){
+    _clear_channel();
 }
 
-void PV::_read() {
-    //Check element count
-    if (ca_element_count(channel) != 1) {
-        error = "The element count for PV " + std::string(pvName) + " is not 1\n";
-        throw std::runtime_error("The element count for PV " + std::string(pvName) + " is not 1");
-    }
-    chtype dataType = ca_field_type(channel);        
+template<typename TypeValue>
+void PV::write(TypeValue newValue) {
+    _put(newValue);
+}
 
-    if (dataType == DBR_DOUBLE) {
-        value = _get<dbr_double_t>();
-    } else if (dataType == DBR_FLOAT) {
-        value = _get<dbr_float_t>();
-    } else if (dataType == DBR_ENUM) {
-        value = _get<dbr_enum_t>();
-    } else if (dataType == DBR_SHORT) {
-        value = _get<dbr_short_t>();
-    } else if (dataType == DBR_CHAR) {
-        value = _get<dbr_char_t>();
-    } else if (dataType == DBR_STRING) {
-        value = _get_string();
-    } else if (dataType == DBR_LONG) {
-        value = _get<dbr_long_t>();
-    } else {
-        throw std::runtime_error("Unsupported data type. The supported data types are: d, f, t, s, h, A40_c, l");
-    }
+void PV::write_string(std::string newValue) {
+    _put_string(newValue);
+}
+
+template<typename TypeValue>
+TypeValue PV::read() {
+    TypeValue value = _get<TypeValue>();
+    return value;
+}
+
+std::string PV::read_string() {
+    std::string value = _get_string();
+    return value;
 }
 
 template<typename TypeValue>
 TypeValue PV::_get() {
     TypeValue pval;
     SEVCHK(ca_get(ca_field_type(channel), channel, &pval), ("Failed to get value from PV " + pvName).c_str());
-    pend();
+    SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
     return pval;
 }
 
 std::string PV::_get_string() {
     dbr_string_t pValue;
     SEVCHK(ca_get(DBR_STRING, channel, &pValue), ("Failed to get value from PV " + pvName).c_str());
-    pend();
+    SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
     return std::string(static_cast<const char*>(pValue));
+}
+
+template<typename TypeValue>
+void PV::_put(TypeValue value) {
+        chtype field_type = get_dbr_type(typeid(value).name());
+        SEVCHK(ca_put(field_type, channel, &value), ("Failed to put value to PV " + pvName).c_str());
+        SEVCHK(ca_pend_io(5.0), ("Failed to put value to PV " + pvName).c_str());
+}
+
+void PV::_put_string(std::string value){
+        SEVCHK(ca_put(DBR_STRING, channel, value.c_str()), ("Failed to put value to PV " + std::string(pvName)).c_str());
+        SEVCHK(ca_pend_io(5.0), ("Failed to put value to PV " + std::string(pvName)).c_str());
+}
+
+void PV::_create_channel(){
+    SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
+    SEVCHK(ca_pend_io(5.0), ("Failed to create channel for PV " + pvName).c_str());
+    }
+
+void PV::_clear_channel(){
+    SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());
+    SEVCHK(ca_pend_io(5.0), ("Failed to destroy channel for PV " + pvName).c_str());
+    }
+
+//Instantiate the template function for allowed types
+template double PV::read<double>();
+template float PV::read<float>();
+template int PV::read<int>();
+template short PV::read<short>();
+template char PV::read<char>();
+template long PV::read<long>();
+
+template void PV::write<double>(double newValue);
+template void PV::write<float>(float newValue);
+template void PV::write<int>(int newValue);
+template void PV::write<short>(short newValue);
+template void PV::write<char>(char newValue);
+template void PV::write<long>(long newValue);
+
+// Take a type name from typeid(type).name() and return the corresponding DBR_ type
+chtype PV::get_dbr_type(std::string type_name) {
+    if (type_name == "d") {
+        return DBR_DOUBLE;
+    } else if (type_name == "f") {
+        return DBR_FLOAT;
+    } else if (type_name == "i") {
+        return DBR_INT;
+    } else if (type_name == "s") {
+        return DBR_SHORT;
+    } else if (type_name == "c") {
+        return DBR_CHAR;
+    } else if (type_name == "l") {
+        return DBR_LONG;
+    } else if (type_name == "a") {
+        return DBR_ENUM;
+    } else if (type_name == "std::string") {
+        return DBR_STRING;
+    } else {
+        throw std::runtime_error("Type " + type_name + " not supported");
+    }
 }

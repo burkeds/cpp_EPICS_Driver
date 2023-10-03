@@ -16,49 +16,21 @@ class PV {
     std::string deviceName;
     std::string fieldName;
     std::string pvName;
-    std::any value;
     chid channel;
-    std::vector<evid*> eventIDs;
-    std::string status;
-    std::vector<short> allowed_types = {DBR_DOUBLE,
-                                        DBR_FLOAT,
-                                        DBR_ENUM,
-                                        DBR_SHORT,
-                                        DBR_CHAR,
-                                        DBR_STRING,
-                                        DBR_LONG};
-    //Initialize the channel
-    void _create_channel(){
-        SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
-        };
-
-    //Destroy the channel
-    void _clear_channel(){
-        //Check if channel is valid
-        if (channel == NULL) {
-            return;
-        }
-        std::cout << "Destroying channel for PV _ " << pvName << std::endl;
-        SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());
-        };
+    
+    //Create and destroy channel
+    void _create_channel();
+    void _clear_channel();
     
     //Reading PVs
-    void _read();
     template<typename TypeValue>
     TypeValue _get();
     std::string _get_string();
 
     //Writing PVs
     template<typename TypeValue>
-    void _put(TypeValue value, chtype m_field_type) {
-        SEVCHK(ca_put(m_field_type, channel, &value), ("Failed to put value to PV " + pvName).c_str());
-        pend();
-        }
-
-    void _put_string(std::string value){
-        SEVCHK(ca_put(DBR_STRING, channel, value.c_str()), ("Failed to put value to PV " + std::string(pvName)).c_str());
-        pend();
-        };
+    void _put(TypeValue value);
+    void _put_string(std::string value);
 
     public:
     PV(std::string m_deviceName, std::string m_fieldName);
@@ -66,21 +38,23 @@ class PV {
     
     std::string get_name() {return fieldName;};
     chtype get_data_type() {return ca_field_type(channel);};
-    std::any get_value() {return value;};
     chid get_channel() {return channel;};
-    std::vector<short> get_allowed_types() {return allowed_types;};
     std::string get_error() {return error;};
-
-    // Pend and flush IO buffer
-    void pend() {SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + pvName).c_str());};
-    void flush() {ca_flush_io();};
     
     //Cleanup
-    void clear_channel() {_clear_channel();};
+    void clear_channel();
+
     //Read
-    void read() {_read();};
+    template<typename TypeValue>
+    TypeValue read();
+    std::string read_string();
+
     //Write PVs
-    void write(std::any m_value, std::string m_dataType);
+    template<typename TypeValue>
+    void write(TypeValue newValue);
+    void write_string(std::string newValue);
+
+    chtype get_dbr_type(std::string type_name);
 };
 ;
 #endif // PV_H
