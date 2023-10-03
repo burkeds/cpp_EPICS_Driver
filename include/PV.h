@@ -16,7 +16,6 @@ class PV {
     std::string deviceName;
     std::string fieldName;
     std::string pvName;
-    chtype dataType;
     std::any value;
     chid channel;
     std::vector<evid*> eventIDs;
@@ -31,9 +30,17 @@ class PV {
     //Initialize the channel
     void _create_channel(){
         SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
-        SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + pvName).c_str());
-    };
-    void _clear_channel(){SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());};
+        };
+
+    //Destroy the channel
+    void _clear_channel(){
+        //Check if channel is valid
+        if (channel == NULL) {
+            return;
+        }
+        std::cout << "Destroying channel for PV _ " << pvName << std::endl;
+        SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());
+        };
     
     //Reading PVs
     void _read();
@@ -43,8 +50,15 @@ class PV {
 
     //Writing PVs
     template<typename TypeValue>
-    void _put(TypeValue value, chtype m_field_type) {SEVCHK(ca_put(m_field_type, channel, &value), ("Failed to put value to PV " + pvName).c_str());};
-    void _put_string(std::string value){SEVCHK(ca_put(DBR_STRING, channel, value.c_str()), ("Failed to put value to PV " + std::string(pvName)).c_str());};
+    void _put(TypeValue value, chtype m_field_type) {
+        SEVCHK(ca_put(m_field_type, channel, &value), ("Failed to put value to PV " + pvName).c_str());
+        pend();
+        }
+
+    void _put_string(std::string value){
+        SEVCHK(ca_put(DBR_STRING, channel, value.c_str()), ("Failed to put value to PV " + std::string(pvName)).c_str());
+        pend();
+        };
 
     public:
     PV(std::string m_deviceName, std::string m_fieldName);
@@ -58,13 +72,13 @@ class PV {
     std::string get_error() {return error;};
 
     // Pend and flush IO buffer
-    void pend() {ca_pend_io(5.0);};
+    void pend() {SEVCHK(ca_pend_io(5.0), ("Failed to pend IO for PV " + pvName).c_str());};
     void flush() {ca_flush_io();};
     
     //Cleanup
-    void clear_channel(){_clear_channel();};
+    void clear_channel() {_clear_channel();};
     //Read
-    void read();
+    void read() {_read();};
     //Write PVs
     void write(std::any m_value, std::string m_dataType);
 };

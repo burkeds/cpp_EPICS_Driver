@@ -25,19 +25,20 @@
 */
 
 namespace epics {
-    class EpicsProxy;
-} // namespace epics
 
 class EpicsProxy {
     //Class Variables
 private:
     std::string error;
     std::string deviceName;
-    std::vector<PV> pvList;
+    std::vector<PV*> pvList;
+    std::string axisName;
 
 public:
     //Constructor and destructor
-    EpicsProxy(){;};
+    EpicsProxy(std::string name){
+        axisName = name;
+    };
     ~EpicsProxy();
 
     void init(std::string deviceName, std::vector<std::string> pvNames);
@@ -45,16 +46,20 @@ public:
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
 
+    // Pend
+    void pend() {SEVCHK(ca_pend_io(5.0), "Failed to pend");}
+
     //Cleanup
     void clear_all_channels();
 
     //Access functions
     std::string get_device_name() {return deviceName;};
 
-    //Read
-    void read_all() {for (auto &pv : pvList) {pv.read();}};
-    std::any read_pv(std::string m_fieldName);
+    //Read and write
+    void read_all();
+    void read_pv(std::string m_fieldName);
+    std::any get_pv_value(std::string m_fieldName);
     void write_pv(std::string m_fieldName, std::any m_value, std::string m_dataType);
 };
-;
-#endif // EPICSPROXY_H
+}
+#endif

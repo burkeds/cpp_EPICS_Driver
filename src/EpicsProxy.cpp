@@ -26,9 +26,9 @@
 
 #include "EpicsProxy.h"
 
-using namespace epics;
+namespace epics{
 
-void EpicsProxy::init(std::string m_deviceName, std::vector<std::string>> m_pvNames) {
+void EpicsProxy::init(std::string m_deviceName, std::vector<std::string> m_pvNames) {
     //Initialize the EPICS context
     SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
 
@@ -37,47 +37,73 @@ void EpicsProxy::init(std::string m_deviceName, std::vector<std::string>> m_pvNa
 
     //Create the PVs
     for (auto m_pvName : m_pvNames) {
-        pvList.push_back(PV(deviceName, m_pvName));
+        PV* m_pv = new PV(deviceName, m_pvName);
+        pvList.push_back(m_pv);
     }
 }
 
 EpicsProxy::~EpicsProxy() {
+    std::cout << "Destroying EpicsProxy" << std::endl;
     //Clear all channels
     clear_all_channels();
 
-    //Destroy the EPICS context
-    ca_context_destroy();
+    
 
-    //Delete all entries in pvList
-    for (auto m_pv : pvList) {
-        m_pv.~PV();
+    //Destruct the contents of all pointers in pvList
+    for (PV* m_pv : pvList) {
+        delete m_pv;
     }
     pvList.clear();
+
+    //Destroy the EPICS context
+    ca_context_destroy();
 }
 
 void EpicsProxy::clear_all_channels() {
-    for (auto m_pv : pvList) {
-        m_pv.clear_channel();
+    std::cout << "Clearing all channels" << std::endl;
+    for (PV* m_pv : pvList) {
+        
+        std::cout << "Clearing channel for PV ASK " << m_pv->get_name() << std::endl;
+        pend();
+        std::cout << "Calling clear_channel" << std::endl;
+        //m_pv->clear_channel();
+        std::cout << "Finishing clear_channel" << std::endl;
     }
 }
 
+void EpicsProxy::read_all() {
+    for (PV* m_pv : pvList) {
+        m_pv->read();
+    }
+    pend();
+}
+
 void EpicsProxy::write_pv(std::string m_fieldName, std::any m_value, std::string m_dataType) {
-    for (auto m_pv : pvList) {
-        if (m_pv.get_name() == m_fieldName) {
-            m_pv.write(m_value, m_dataType);
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            m_pv->write(m_value, m_dataType);
+            pend();
             return;
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-std::any EpicsProxy::read_pv(std::string m_fieldName)
-{
-	for (auto m_pv : pvList) {
-        if (m_pv.get_name() == m_fieldName) {
-            m_pv.read();
-            return m_pv.get_value();
+void EpicsProxy::read_pv(std::string m_fieldName) {
+	    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            m_pv->read();
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
+std::any EpicsProxy::get_pv_value(std::string m_fieldName) {
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            return m_pv->get_value();
+        }
+    }
+    throw std::runtime_error("PV " + m_fieldName + " not found");
+}
 }
