@@ -26,12 +26,25 @@
 
 namespace epics {
 
+struct caConfig {
+    const char* ca_addr_list;
+    const char* ca_auto_addr_list;
+    const char* ca_conn_tmo;
+    const char* ca_beacon_period;
+    const char* ca_repeater_port;
+    const char* ca_server_port;
+    const char* ca_max_array_bytes;
+    const char* ts_min_west;
+};
+
 class EpicsProxy {
     //Class Variables
 private:
     std::string error;
     std::string deviceName;
     std::vector<PV*> pvList;
+    std::string statusPV;
+    unsigned long currentStatus = 0x1;
     std::string axisName;
     std::vector<short> allowed_types = {DBR_DOUBLE,
                                         DBR_FLOAT,
@@ -48,14 +61,11 @@ public:
 
     void init(std::string m_deviceName,
               std::vector<std::string> m_pvNames,
-              std::string ca_addr_list,
-              std::string ca_auto_addr_list,
-              double ca_conn_tmo,
-              double ca_beacon_period,
-              double ca_repeater_port,
-              double ca_server_port,
-              double ca_max_array_bytes,
-              double ts_min_west);
+              caConfig m_caConfig);
+    
+    void set_status_pv(std::string m_statusPV) {statusPV = m_statusPV;};
+    void set_current_status(unsigned long m_currentStatus) {currentStatus = m_currentStatus;};
+    unsigned long get_current_status() {return currentStatus;}
 
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
@@ -64,6 +74,9 @@ public:
     std::string get_device_name() {return deviceName;};
     std::string get_axis_name() {return axisName;};
     std::vector<short> get_allowed_types() {return allowed_types;};
+
+    void add_monitor(std::string m_fieldName, EpicsProxy* proxy, void (*callback)(struct event_handler_args args));
+    void remove_monitor(std::string m_fieldName);
 
     //Read and write functions
     template<typename TypeValue>
@@ -74,10 +87,7 @@ public:
     template<typename TypeValue>
     TypeValue read_pv(std::string m_fieldName);
     
-    
-
     std::string read_pv_string(std::string m_fieldName);
-    
 };
 }
 #endif

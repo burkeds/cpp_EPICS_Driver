@@ -10,13 +10,20 @@
 #include <cadef.h>
 #include <db_access.h>
 
+namespace epics {
+
+class EpicsProxy;
+
 class PV {
     private:
     std::string error;
     std::string deviceName;
     std::string fieldName;
     std::string pvName;
+    std::vector<evid> monitors;
     chid channel;
+
+    friend class EpicsProxy;
     
     //Create and destroy channel
     void _create_channel();
@@ -34,7 +41,7 @@ class PV {
 
     public:
     PV(std::string m_deviceName, std::string m_fieldName);
-    ~PV(){clear_channel();};
+    ~PV();
     
     std::string get_name() {return fieldName;};
     chtype get_data_type() {return ca_field_type(channel);};
@@ -55,6 +62,9 @@ class PV {
     void write_string(std::string newValue);
 
     chtype get_dbr_type(std::string type_name);
+
+    void add_monitor(EpicsProxy* proxy, void (*callback)(struct event_handler_args args));
+    void remove_monitor();
 };
-;
-#endif // PV_H
+} // namespace epics
+#endif

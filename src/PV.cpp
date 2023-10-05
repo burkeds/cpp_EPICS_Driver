@@ -1,10 +1,17 @@
 #include "PV.h"
 
+namespace epics {
+
 PV::PV(std::string m_deviceName, std::string m_fieldName){
     fieldName = m_fieldName;
     deviceName = m_deviceName;
     pvName = deviceName + fieldName;
     _create_channel();
+}
+
+PV::~PV(){
+        remove_monitor();
+        clear_channel();
 }
 
 void PV::clear_channel(){
@@ -34,6 +41,11 @@ std::string PV::read_string() {
 template<typename TypeValue>
 TypeValue PV::_get() {
     TypeValue pval;
+    //If the field name is .MSTA
+    if (fieldName == ".MSTA") {
+        std::cout << "The MSTA field type is: " << ca_field_type(channel) << std::endl;
+        std::cout << "TypeValue is: " << typeid(TypeValue).name() << std::endl;
+    }
     SEVCHK(ca_get(ca_field_type(channel), channel, &pval), ("Failed to get value from PV " + pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
     return pval;
@@ -61,12 +73,12 @@ void PV::_put_string(std::string value){
 void PV::_create_channel(){
     SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to create channel for PV " + pvName).c_str());
-    }
+}
 
 void PV::_clear_channel(){
     SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to destroy channel for PV " + pvName).c_str());
-    }
+}
 
 //Instantiate the template function for allowed types
 template double PV::read<double>();
@@ -75,6 +87,7 @@ template int PV::read<int>();
 template short PV::read<short>();
 template char PV::read<char>();
 template long PV::read<long>();
+template unsigned long PV::read<unsigned long>();
 
 template void PV::write<double>(double newValue);
 template void PV::write<float>(float newValue);
@@ -82,6 +95,7 @@ template void PV::write<int>(int newValue);
 template void PV::write<short>(short newValue);
 template void PV::write<char>(char newValue);
 template void PV::write<long>(long newValue);
+template void PV::write<unsigned long>(unsigned long newValue);
 
 // Take a type name from typeid(type).name() and return the corresponding DBR_ type
 chtype PV::get_dbr_type(std::string type_name) {
@@ -97,6 +111,8 @@ chtype PV::get_dbr_type(std::string type_name) {
         return DBR_CHAR;
     } else if (type_name == "l") {
         return DBR_LONG;
+    } else if (type_name == "m") {
+        return DBR_LONG;
     } else if (type_name == "a") {
         return DBR_ENUM;
     } else if (type_name == "std::string") {
@@ -104,4 +120,21 @@ chtype PV::get_dbr_type(std::string type_name) {
     } else {
         throw std::runtime_error("Type " + type_name + " not supported");
     }
+}
+
+// Add a monitor for the PV and add the event id to the list of monitors
+void PV::add_monitor(EpicsProxy* proxy, void (*callback)(struct event_handler_args args)) {
+    evid monitor;
+    SEVCHK(ca_add_masked_array_event(ca_field_type(channel), 1, channel, callback, proxy, 0.0, 0.0, 0.0, &monitor, DBE_VALUE), ("Failed to add monitor for PV " + pvName).c_str());
+    SEVCHK(ca_pend_io(5.0), ("Failed to add monitor for PV " + pvName).c_str());
+    monitors.push_back(monitor);
+}
+
+void PV::remove_monitor() {
+    for (auto monitor : monitors) {
+        SEVCHK(ca_clear_event(monitor), ("Failed to remove monitor for PV " + pvName).c_str());
+        SEVCHK(ca_pend_io(5.0), ("Failed to remove monitor for PV " + pvName).c_str());
+    }
+    monitors.clear();
+}
 }
