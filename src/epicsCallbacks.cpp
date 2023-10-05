@@ -70,6 +70,39 @@ Bit       MSTA        :   NOMAD
 
 */
 namespace epics {
+
+void msta_to_nomad_status(EpicsProxy* proxy, double d_msta) {
+    //Translate the MSTA value into status values expected by the NOMAD GUI (McMasterAxisDef.h)
+    //This can be called to initialize the currentStatus member of EpicsProxy
+    unsigned long msta = static_cast<unsigned long>(d_msta);
+    unsigned long NOMAD_STATUS = 0;
+        if (msta & (1 << 1)) {
+        NOMAD_STATUS |= 0x10; // ACHIEVED_STATUS
+    } else if (msta & (1 << 2)) {
+        NOMAD_STATUS |= 0x4; // HIGH_HARDSTOP
+    } else if (msta & (1 << 6)) {
+        NOMAD_STATUS |= 0x2; // RUNNING_STATUS
+    } else if (msta & (1 << 7)) {
+        NOMAD_STATUS |= 0x10; // ACHIEVED_STATUS
+    } else if (msta & (1 << 9)) {
+        NOMAD_STATUS |= 0x1; // ERROR_STATUS
+    } else if (msta & (1 << 10)) {
+        NOMAD_STATUS |= 0x2; // RUNNING_STATUS
+    } else if (msta & (1 << 12)) {
+        NOMAD_STATUS |= 0x1; // ERROR_STATUS
+    } else if (msta & (1 << 13)) {
+        NOMAD_STATUS |= 0x8; // LOW_HARDSTOP
+    } else if (msta & (1 << 14)) {
+        NOMAD_STATUS |= 0x10; // ACHIEVED_STATUS
+    } else {
+        NOMAD_STATUS |= 0x1; // ERROR_STATUS
+    }
+
+    //Set the currentStatus member of EpicsProxy to NOMAD_STATUS
+    proxy->set_current_status(NOMAD_STATUS);
+
+}
+
 void msta_monitor_callback(struct event_handler_args args) {
     //Translate the MSTA value into status values expected by the NOMAD GUI (McMasterAxisDef.h)
     //The MSTA value is a 32-bit unsigned integer. The status values are defined in McMasterAxisDef.h
