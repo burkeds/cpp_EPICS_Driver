@@ -49,7 +49,7 @@ void EpicsProxy::init(std::string m_deviceName,
         PV* m_pv = new PV(deviceName, m_pvName);
         pvList.push_back(m_pv);
     }
-    ca_pend_io(5.0);
+    SEVCHK(ca_pend_io(5.0), "Failed to create PVs");
 }
 
 EpicsProxy::EpicsProxy(std::string name) {
@@ -90,20 +90,20 @@ void EpicsProxy::remove_monitor(std::string m_fieldName) {
 
 
 template<typename TypeValue>
-void EpicsProxy::write_pv(std::string m_fieldName, TypeValue m_value, bool pend) {
+void EpicsProxy::write_pv(std::string m_fieldName, TypeValue m_value) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            m_pv->write<TypeValue>(m_value, pend);
+            m_pv->write<TypeValue>(m_value);
             return;
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-void EpicsProxy::write_pv_string(std::string m_fieldName, std::string m_value, bool pend) {
+void EpicsProxy::write_pv_string(std::string m_fieldName, std::string m_value) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            m_pv->write_string(m_value, pend);
+            m_pv->write_string(m_value);
             return;
         }
     }
@@ -111,56 +111,56 @@ void EpicsProxy::write_pv_string(std::string m_fieldName, std::string m_value, b
 }
 
 template<typename TypeValue>
-TypeValue EpicsProxy::read_pv(std::string m_fieldName, bool pend) {
+TypeValue EpicsProxy::read_pv(std::string m_fieldName) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            return m_pv->read<TypeValue>(pend);
+            return m_pv->read<TypeValue>();
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
-std::string EpicsProxy::read_pv_string(std::string m_fieldName, bool pend) {
+std::string EpicsProxy::read_pv_string(std::string m_fieldName) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            return m_pv->read_string(pend);
+            return m_pv->read_string();
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
 template<typename TypeValue>
-std::vector<TypeValue> EpicsProxy::read_pv_array(std::string m_fieldName, bool pend) {
+std::vector<TypeValue> EpicsProxy::read_pv_array(std::string m_fieldName) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
-            return m_pv->read_array<TypeValue>(pend);
+            return m_pv->read_array<TypeValue>();
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
 //Instantiate the template function for allowed types
-    template double EpicsProxy::read_pv<double>(std::string m_fieldName, bool pend);
-    template float EpicsProxy::read_pv<float>(std::string m_fieldName, bool pend);
-    template int EpicsProxy::read_pv<int>(std::string m_fieldName, bool pend);
-    template short EpicsProxy::read_pv<short>(std::string m_fieldName, bool pend);
-    template char EpicsProxy::read_pv<char>(std::string m_fieldName, bool pend);
-    template long EpicsProxy::read_pv<long>(std::string m_fieldName, bool pend);
-    template unsigned long EpicsProxy::read_pv<unsigned long>(std::string m_fieldName, bool pend);
+    template double EpicsProxy::read_pv<double>(std::string m_fieldName);
+    template float EpicsProxy::read_pv<float>(std::string m_fieldName);
+    template int EpicsProxy::read_pv<int>(std::string m_fieldName);
+    template short EpicsProxy::read_pv<short>(std::string m_fieldName);
+    template char EpicsProxy::read_pv<char>(std::string m_fieldName);
+    template long EpicsProxy::read_pv<long>(std::string m_fieldName);
+    template unsigned long EpicsProxy::read_pv<unsigned long>(std::string m_fieldName);
 
-    template std::vector<double> EpicsProxy::read_pv_array<double>(std::string m_fieldName, bool pend);
-    template std::vector<float> EpicsProxy::read_pv_array<float>(std::string m_fieldName, bool pend);
-    template std::vector<int> EpicsProxy::read_pv_array<int>(std::string m_fieldName, bool pend);
-    template std::vector<short> EpicsProxy::read_pv_array<short>(std::string m_fieldName, bool pend);
-    template std::vector<char> EpicsProxy::read_pv_array<char>(std::string m_fieldName, bool pend);
-    template std::vector<long> EpicsProxy::read_pv_array<long>(std::string m_fieldName, bool pend);
-    template std::vector<unsigned long> EpicsProxy::read_pv_array<unsigned long>(std::string m_fieldName, bool pend);
+    template std::vector<double> EpicsProxy::read_pv_array<double>(std::string m_fieldName);
+    template std::vector<float> EpicsProxy::read_pv_array<float>(std::string m_fieldName);
+    template std::vector<int> EpicsProxy::read_pv_array<int>(std::string m_fieldName);
+    template std::vector<short> EpicsProxy::read_pv_array<short>(std::string m_fieldName);
+    template std::vector<char> EpicsProxy::read_pv_array<char>(std::string m_fieldName);
+    template std::vector<long> EpicsProxy::read_pv_array<long>(std::string m_fieldName);
+    template std::vector<unsigned long> EpicsProxy::read_pv_array<unsigned long>(std::string m_fieldName);
 
-    template void EpicsProxy::write_pv<double>(std::string m_fieldName, double m_value, bool pend);
-    template void EpicsProxy::write_pv<float>(std::string m_fieldName, float m_value, bool pend);
-    template void EpicsProxy::write_pv<int>(std::string m_fieldName, int m_value, bool pend);
-    template void EpicsProxy::write_pv<short>(std::string m_fieldName, short m_value, bool pend);
-    template void EpicsProxy::write_pv<char>(std::string m_fieldName, char m_value, bool pend);
-    template void EpicsProxy::write_pv<long>(std::string m_fieldName, long m_value, bool pend);
-    template void EpicsProxy::write_pv<unsigned long>(std::string m_fieldName, unsigned long m_value, bool pend);
+    template void EpicsProxy::write_pv<double>(std::string m_fieldName, double m_value);
+    template void EpicsProxy::write_pv<float>(std::string m_fieldName, float m_value);
+    template void EpicsProxy::write_pv<int>(std::string m_fieldName, int m_value);
+    template void EpicsProxy::write_pv<short>(std::string m_fieldName, short m_value);
+    template void EpicsProxy::write_pv<char>(std::string m_fieldName, char m_value);
+    template void EpicsProxy::write_pv<long>(std::string m_fieldName, long m_value);
+    template void EpicsProxy::write_pv<unsigned long>(std::string m_fieldName, unsigned long m_value);
 }

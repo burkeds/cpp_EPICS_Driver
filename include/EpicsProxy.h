@@ -102,17 +102,17 @@ public:
 
     //Read and write functions
     template<typename TypeValue>
-    void write_pv(std::string m_fieldName, TypeValue m_value, bool pend = true);
+    void write_pv(std::string m_fieldName, TypeValue m_value);
     
-    void write_pv_string(std::string m_fieldName, std::string m_value, bool pend = true);
+    void write_pv_string(std::string m_fieldName, std::string m_value);
 
     template<typename TypeValue>
-    TypeValue read_pv(std::string m_fieldName, bool pend = true);
+    TypeValue read_pv(std::string m_fieldName);
     
-    std::string read_pv_string(std::string m_fieldName, bool pend = true);
+    std::string read_pv_string(std::string m_fieldName);
 
     template<typename TypeValue>
-    std::vector<TypeValue> read_pv_array(std::string m_fieldName, bool pend = true);
+    std::vector<TypeValue> read_pv_array(std::string m_fieldName);
 
 };
 }
