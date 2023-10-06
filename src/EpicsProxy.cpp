@@ -15,11 +15,10 @@
  *  float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
  * 
  * @note The allowed data types are: double, float, enum, short, char, string('A40_c'), long, and unsigned long
- * @note Arrays are not supported in this version of EpicsProxy
  * @note The EpicsProxy class requires the EPICS library to be installed on the system and linked with the application.
  * @note Contact Devin Burke (dburke1215@gmail.com) for questions or comments.
  * @note https://github.com/burkeds/cpp_EPICS_Driver
- * @version 1.2 
+ * @version 1.3 
  * @author Devin Burke
  */
 
