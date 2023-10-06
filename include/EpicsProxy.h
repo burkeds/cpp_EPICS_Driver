@@ -40,6 +40,7 @@ struct caConfig {
 class EpicsProxy {
     //Class Variables
 private:
+    struct ca_client_context *context = nullptr;
     std::string error;
     std::string deviceName;
     std::vector<PV*> pvList;
@@ -65,7 +66,7 @@ public:
     
     void set_status_pv(std::string m_statusPV) {statusPV = m_statusPV;};
     void set_current_status(unsigned long m_currentStatus) {currentStatus = m_currentStatus;};
-    unsigned long get_current_status() {return currentStatus;}
+    
 
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
@@ -74,6 +75,9 @@ public:
     std::string get_device_name() {return deviceName;};
     std::string get_axis_name() {return axisName;};
     std::vector<short> get_allowed_types() {return allowed_types;};
+    unsigned long get_current_status() {return currentStatus;};
+    struct ca_client_context* get_context() {return context;};
+
 
     void add_monitor(std::string m_fieldName, EpicsProxy* proxy, void (*callback)(struct event_handler_args args));
     void remove_monitor(std::string m_fieldName);

@@ -22,11 +22,12 @@ class PV {
     std::string pvName;
     std::vector<evid> monitors;
     chid channel;
+    //void* puser;
 
     friend class EpicsProxy;
     
     //Create and destroy channel
-    void _create_channel();
+    void _create_channel(bool pend);
     void _clear_channel();
     
     //Reading PVs

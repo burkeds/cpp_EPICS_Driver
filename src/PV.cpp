@@ -1,4 +1,13 @@
+/**
+ * @file PV.cpp
+ * @brief Implementation of the PV class for accessing EPICS process variables.
+ */
+
+
 #include "PV.h"
+#include <unistd.h>
+#include <limits.h>
+#include <boost/asio/ip/host_name.hpp>
 
 namespace epics {
 
@@ -6,7 +15,7 @@ PV::PV(std::string m_deviceName, std::string m_fieldName){
     fieldName = m_fieldName;
     deviceName = m_deviceName;
     pvName = deviceName + fieldName;
-    _create_channel();
+    _create_channel(false);
 }
 
 PV::~PV(){
@@ -42,10 +51,6 @@ template<typename TypeValue>
 TypeValue PV::_get() {
     TypeValue pval;
     //If the field name is .MSTA
-    if (fieldName == ".MSTA") {
-        std::cout << "The MSTA field type is: " << ca_field_type(channel) << std::endl;
-        std::cout << "TypeValue is: " << typeid(TypeValue).name() << std::endl;
-    }
     SEVCHK(ca_get(ca_field_type(channel), channel, &pval), ("Failed to get value from PV " + pvName).c_str());
     SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
     return pval;
@@ -70,9 +75,12 @@ void PV::_put_string(std::string value){
         SEVCHK(ca_pend_io(5.0), ("Failed to put value to PV " + std::string(pvName)).c_str());
 }
 
-void PV::_create_channel(){
+void PV::_create_channel(bool pend){
     SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
-    SEVCHK(ca_pend_io(5.0), ("Failed to create channel for PV " + pvName).c_str());
+    if (pend) {
+        SEVCHK(ca_pend_io(5.0), ("Failed to create channel for PV " + pvName).c_str());
+    }
+    //ca_set_puser(channel, puser);
 }
 
 void PV::_clear_channel(){

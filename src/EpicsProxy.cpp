@@ -1,27 +1,26 @@
 /**
  * @brief The EpicsProxy class provides a C++ wrapper around the EPICS library for interfacing with EPICS PVs.
  *
- * The EpicsProxy class provides a simple and convenient way to interact with EPICS PVs from C++ code. It encapsulates the low-level details of the EPICS library and provides a high-level interface for reading and writing PV values, monitoring PV changes, and handling PV events.
+ * The EpicsProxy class provides a simple and convenient way to interact with EPICS PVs from C++ code. 
+ * It encapsulates the low-level details of the EPICS library and provides a high-level interface for 
+ * reading and writing PV values, monitoring PV changes, and handling PV events.
  *
- * To use the EpicsProxy class, simply create an instance of the class with the name of the device you want to connect to, and then use the public member functions to interact with the PVs. The class takes care of connecting to the EPICS server, creating the necessary channels, and handling the communication with the PVs.
+ * To use the EpicsProxy class, simply create an instance of the class with the name of the device you
+ *  want to connect to, and then use the public member functions to interact with the PVs. The class
+ *  takes care of connecting to the EPICS server, creating the necessary channels, and handling the
+ *  communication with the PVs.
  *
- * Values read from PVs are returned as std::any objects and must be appropriately cast to the desired type. Values written to PVs must be of a valid type. The allowed data types are: double('t'), float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
+ * Values read from PVs are returned as std::any objects and must be appropriately cast to the desired
+ *  type. Values written to PVs must be of a valid type. The allowed data types are: double('t'),
+ *  float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
  * 
- * Example usage:
- *
- * ```
- * EpicsProxy proxy("my_device"); // Where my_device is a nickname for the device
- * proxy.connect();
- * channelID_1 = pv("pvName1");
- * channelID_2 = pv("pvName2");
- * std::any value = proxy.read_pv("pvName1");
- * proxy.write_pv("pvName1", 3.14, 'd');
- * proxy.monitor_pv(channelID, my_callback, callback); @note Do not write a new data type to a PV that is being monitored
- * ```
- * @note The allowed data types are: double('t'), float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
+ * @note The allowed data types are: double, float, enum, short, char, string('A40_c'), long, and unsigned long
  * @note Arrays are not supported in this version of EpicsProxy
  * @note The EpicsProxy class requires the EPICS library to be installed on the system and linked with the application.
- * @version 1.1
+ * @note Contact Devin Burke (dburke1215@gmail.com) for questions or comments.
+ * @note https://github.com/burkeds/cpp_EPICS_Driver
+ * @version 1.2 
+ * @author Devin Burke
  */
 
 #include "EpicsProxy.h"
@@ -41,10 +40,9 @@ void EpicsProxy::init(std::string m_deviceName,
     setenv("EPICS_CA_MAX_ARRAY_BYTES", m_caConfig.ca_max_array_bytes, 1);
     setenv("EPICS_TS_MIN_WEST", m_caConfig.ts_min_west, 1);
 
-
-    //Initialize the EPICS context
+    //Initialize the EPICS context and assign a pointer to the context
     SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
-
+    context = ca_current_context();
     //Set the device name
     deviceName = m_deviceName;
 
@@ -53,6 +51,7 @@ void EpicsProxy::init(std::string m_deviceName,
         PV* m_pv = new PV(deviceName, m_pvName);
         pvList.push_back(m_pv);
     }
+    ca_pend_io(5.0);
 }
 EpicsProxy::EpicsProxy(std::string name) {
     //Set the device name

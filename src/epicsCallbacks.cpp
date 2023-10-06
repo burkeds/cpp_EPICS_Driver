@@ -1,5 +1,9 @@
+/**
+ * @file epicsCallbacks.cpp
+ * @brief Implementation of the callback functions for EPICS process variables.
+ */
+
 #include "epicsCallbacks.h"
-#include "EpicsProxy.h"
 #include <cadef.h>
 
 /*
