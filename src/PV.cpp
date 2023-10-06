@@ -28,51 +28,59 @@ void PV::clear_channel(){
 }
 
 template<typename TypeValue>
-void PV::write(TypeValue newValue) {
-    _put(newValue);
+void PV::write(TypeValue newValue, bool pend) {
+    _put(newValue, pend);
 }
 
-void PV::write_string(std::string newValue) {
-    _put_string(newValue);
-}
-
-template<typename TypeValue>
-TypeValue PV::read() {
-    TypeValue value = _get<TypeValue>();
-    return value;
-}
-
-std::string PV::read_string() {
-    std::string value = _get_string();
-    return value;
+void PV::write_string(std::string newValue, bool pend) {
+    _put_string(newValue, pend);
 }
 
 template<typename TypeValue>
-TypeValue PV::_get() {
+TypeValue PV::read(bool pend) {
+    TypeValue value = _get<TypeValue>(pend);
+    return value;
+}
+
+std::string PV::read_string(bool pend) {
+    std::string value = _get_string(pend);
+    return value;
+}
+
+template<typename TypeValue>
+TypeValue PV::_get(bool pend) {
     TypeValue pval;
     //If the field name is .MSTA
     SEVCHK(ca_get(ca_field_type(channel), channel, &pval), ("Failed to get value from PV " + pvName).c_str());
-    SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
     return pval;
 }
 
-std::string PV::_get_string() {
+std::string PV::_get_string(bool pend) {
     dbr_string_t pValue;
     SEVCHK(ca_get(DBR_STRING, channel, &pValue), ("Failed to get value from PV " + pvName).c_str());
-    SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
     return std::string(static_cast<const char*>(pValue));
 }
 
 template<typename TypeValue>
-void PV::_put(TypeValue value) {
+void PV::_put(TypeValue value, bool pend) {
         chtype field_type = get_dbr_type(typeid(value).name());
         SEVCHK(ca_put(field_type, channel, &value), ("Failed to put value to PV " + pvName).c_str());
-        SEVCHK(ca_pend_io(5.0), ("Failed to put value to PV " + pvName).c_str());
+        if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
 }
 
-void PV::_put_string(std::string value){
+void PV::_put_string(std::string value, bool pend){
         SEVCHK(ca_put(DBR_STRING, channel, value.c_str()), ("Failed to put value to PV " + std::string(pvName)).c_str());
-        SEVCHK(ca_pend_io(5.0), ("Failed to put value to PV " + std::string(pvName)).c_str());
+        if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
 }
 
 void PV::_create_channel(bool pend){
@@ -83,27 +91,29 @@ void PV::_create_channel(bool pend){
     //ca_set_puser(channel, puser);
 }
 
-void PV::_clear_channel(){
+void PV::_clear_channel(bool pend){
     SEVCHK(ca_clear_channel(channel), ("Failed to destroy channel for PV " + pvName).c_str());
-    SEVCHK(ca_pend_io(5.0), ("Failed to destroy channel for PV " + pvName).c_str());
+    if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
 }
 
 //Instantiate the template function for allowed types
-template double PV::read<double>();
-template float PV::read<float>();
-template int PV::read<int>();
-template short PV::read<short>();
-template char PV::read<char>();
-template long PV::read<long>();
-template unsigned long PV::read<unsigned long>();
+template double PV::read<double>(bool pend);
+template float PV::read<float>(bool pend);
+template int PV::read<int>(bool pend);
+template short PV::read<short>(bool pend);
+template char PV::read<char>(bool pend);
+template long PV::read<long>(bool pend);
+template unsigned long PV::read<unsigned long>(bool pend);
 
-template void PV::write<double>(double newValue);
-template void PV::write<float>(float newValue);
-template void PV::write<int>(int newValue);
-template void PV::write<short>(short newValue);
-template void PV::write<char>(char newValue);
-template void PV::write<long>(long newValue);
-template void PV::write<unsigned long>(unsigned long newValue);
+template void PV::write<double>(double newValue, bool pend);
+template void PV::write<float>(float newValue, bool pend);
+template void PV::write<int>(int newValue, bool pend);
+template void PV::write<short>(short newValue, bool pend);
+template void PV::write<char>(char newValue, bool pend);
+template void PV::write<long>(long newValue, bool pend);
+template void PV::write<unsigned long>(unsigned long newValue, bool pend);
 
 // Take a type name from typeid(type).name() and return the corresponding DBR_ type
 chtype PV::get_dbr_type(std::string type_name) {

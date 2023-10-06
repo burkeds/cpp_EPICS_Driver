@@ -44,14 +44,18 @@ int main() {
         std::cout << "Status: " << stat << std::endl;
 
         //Write a new position
-        proxy.write_pv<double>(pvName, 10.0);
+        double new_position = 25.0;
+        proxy.write_pv<double>(pvName, new_position);
 
-        while (pos < 10.0) {
+        while (true) {
             pos = proxy.read_pv<double>(pvReadback);
             std::cout << "Current position: " << pos << std::endl;
             stat = proxy.get_current_status();
         std::cout << "Status: " << stat << std::endl;
             sleep(1.0);
+            if (pos >= new_position - 0.1 && pos <= new_position + 0.1) {
+                break;
+            }
         }
 
         //Read the final position

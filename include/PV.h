@@ -27,18 +27,18 @@ class PV {
     friend class EpicsProxy;
     
     //Create and destroy channel
-    void _create_channel(bool pend);
-    void _clear_channel();
+    void _create_channel(bool pend = true);
+    void _clear_channel(bool pend = true);
     
     //Reading PVs
     template<typename TypeValue>
-    TypeValue _get();
-    std::string _get_string();
+    TypeValue _get(bool pend = true);
+    std::string _get_string(bool pend = true);
 
     //Writing PVs
     template<typename TypeValue>
-    void _put(TypeValue value);
-    void _put_string(std::string value);
+    void _put(TypeValue value, bool pend = true);
+    void _put_string(std::string value, bool pend = true);
 
     public:
     PV(std::string m_deviceName, std::string m_fieldName);
@@ -54,13 +54,13 @@ class PV {
 
     //Read
     template<typename TypeValue>
-    TypeValue read();
-    std::string read_string();
+    TypeValue read(bool pend = true);
+    std::string read_string(bool pend = true);
 
     //Write PVs
     template<typename TypeValue>
-    void write(TypeValue newValue);
-    void write_string(std::string newValue);
+    void write(TypeValue newValue, bool pend = true);
+    void write_string(std::string newValue, bool pend = true);
 
     chtype get_dbr_type(std::string type_name);
 
