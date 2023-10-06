@@ -43,6 +43,9 @@ class PV {
     void _put(TypeValue value);
     void _put_string(std::string value);
 
+    template<typename TypeValue>
+    void _put_array(std::vector<TypeValue> value);
+
     public:
     PV(std::string m_deviceName, std::string m_fieldName);
     ~PV();
@@ -68,6 +71,9 @@ class PV {
     template<typename TypeValue>
     void write(TypeValue newValue);
     void write_string(std::string newValue);
+
+    template<typename TypeValue>
+    void write_array(std::vector<TypeValue> newValue);
 
     chtype get_dbr_type(std::string type_name);
 

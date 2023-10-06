@@ -21,11 +21,19 @@ int main() {
         conf.ca_max_array_bytes = "16384";
         conf.ts_min_west = "360";
 
+        //List of PVs to create
+        std::string pvDev = std::string("devices");
+        EpicsProxy proxy("name");
+        proxy.init("sans:",
+                  {pvDev},
+                  conf);
+
+        /*
         std::string pvName = std::string(".VAL");
         std::string pvStatus = std::string(".MSTA");
         std::string pvReadback = std::string(".RBV");
         std::string pvStop = std::string(".STOP");
-        std::vector<std::string> pvNames = {pvName, pvStatus, pvReadback, pvStop};
+        std::vector<std::string> pvNames = {pvDev, pvName, pvStatus, pvReadback, pvStop};
         //Initialize the EPICS context
         EpicsProxy proxy("name");
         proxy.init("sans:motor[sim_motor]:2-",
@@ -42,7 +50,7 @@ int main() {
         std::cout << "Status: " << stat << std::endl;
 
         //Write a new position
-        double new_position = 20.0;
+        double new_position = 25.0;
         proxy.write_pv<double>(pvName, new_position);
 
         while (true) {
@@ -60,7 +68,25 @@ int main() {
         std::cout << "Final position: " << proxy.read_pv<double>(pvReadback) << std::endl;
         stat = proxy.get_current_status();
         std::cout << "Status: " << stat << std::endl;
+        */
 
+        //Read the array of char stored at sans:devices
+        std::vector<char> array = proxy.read_pv_array<char>(pvDev);
+        
+        //Print the array as a string
+        std::cout << "Array: " << std::string(array.begin(), array.end()) << std::endl;
+
+        //Write a new array of char to sans:devices
+        std::cout << "Writing new array to PV " << pvDev << std::endl;
+        std::vector<char> new_array = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'j'};
+        proxy.write_pv_array<char>(pvDev, new_array);
+
+        //Read the array of char stored at sans:devices
+        array = proxy.read_pv_array<char>(pvDev);
+        //Print the new array as a string
+        std::cout << "Array: " << std::string(array.begin(), array.end()) << std::endl;
+
+        
 
    
     } catch (const std::exception& e) {

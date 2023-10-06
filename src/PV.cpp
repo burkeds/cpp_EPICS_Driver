@@ -35,6 +35,11 @@ void PV::write_string(std::string newValue) {
 }
 
 template<typename TypeValue>
+void PV::write_array(std::vector<TypeValue> newValue) {
+    _put_array(newValue);
+}
+
+template<typename TypeValue>
 TypeValue PV::read() {
     TypeValue value = _get<TypeValue>();
     return value;
@@ -93,6 +98,19 @@ void PV::_put_string(std::string value){
         SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str())
 }
 
+template<typename TypeValue>
+void PV::_put_array(std::vector<TypeValue> value) {
+        TypeValue* array = new TypeValue[value.size()];
+        std::size_t num_elements = value.size();
+        unsigned long count = static_cast<unsigned long>(num_elements);
+        TypeValue first_element = value[0];
+        chtype field_type = get_dbr_type(typeid(first_element).name());
+        std::copy(value.begin(), value.end(), array);
+        SEVCHK(ca_array_put(field_type, count, channel, array), ("Failed to put value to PV " + pvName).c_str());
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str())
+        delete[] array;
+}
+
 void PV::_create_channel(bool pend){
     SEVCHK(ca_create_channel(pvName.c_str(), NULL, NULL, 20, &channel), ("Failed to create channel for PV " + pvName).c_str());
     if (pend) {
@@ -130,6 +148,14 @@ template void PV::write<short>(short newValue);
 template void PV::write<char>(char newValue);
 template void PV::write<long>(long newValue);
 template void PV::write<unsigned long>(unsigned long newValue);
+
+template void PV::write_array<double>(std::vector<double> newValue);
+template void PV::write_array<float>(std::vector<float> newValue);
+template void PV::write_array<int>(std::vector<int> newValue);
+template void PV::write_array<short>(std::vector<short> newValue);
+template void PV::write_array<char>(std::vector<char> newValue);
+template void PV::write_array<long>(std::vector<long> newValue);
+template void PV::write_array<unsigned long>(std::vector<unsigned long> newValue);
 
 // Take a type name from typeid(type).name() and return the corresponding DBR_ type
 chtype PV::get_dbr_type(std::string type_name) {

@@ -107,6 +107,9 @@ public:
     void write_pv_string(std::string m_fieldName, std::string m_value);
 
     template<typename TypeValue>
+    void write_pv_array(std::string m_fieldName, std::vector<TypeValue> m_value);
+
+    template<typename TypeValue>
     TypeValue read_pv(std::string m_fieldName);
     
     std::string read_pv_string(std::string m_fieldName);

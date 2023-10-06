@@ -111,6 +111,17 @@ void EpicsProxy::write_pv_string(std::string m_fieldName, std::string m_value) {
 }
 
 template<typename TypeValue>
+void EpicsProxy::write_pv_array(std::string m_fieldName, std::vector<TypeValue> m_value) {
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            m_pv->write_array<TypeValue>(m_value);
+            return;
+        }
+    }
+    throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
+template<typename TypeValue>
 TypeValue EpicsProxy::read_pv(std::string m_fieldName) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
@@ -163,4 +174,12 @@ std::vector<TypeValue> EpicsProxy::read_pv_array(std::string m_fieldName) {
     template void EpicsProxy::write_pv<char>(std::string m_fieldName, char m_value);
     template void EpicsProxy::write_pv<long>(std::string m_fieldName, long m_value);
     template void EpicsProxy::write_pv<unsigned long>(std::string m_fieldName, unsigned long m_value);
+
+    template void EpicsProxy::write_pv_array<double>(std::string m_fieldName, std::vector<double> m_value);
+    template void EpicsProxy::write_pv_array<float>(std::string m_fieldName, std::vector<float> m_value);
+    template void EpicsProxy::write_pv_array<int>(std::string m_fieldName, std::vector<int> m_value);
+    template void EpicsProxy::write_pv_array<short>(std::string m_fieldName, std::vector<short> m_value);
+    template void EpicsProxy::write_pv_array<char>(std::string m_fieldName, std::vector<char> m_value);
+    template void EpicsProxy::write_pv_array<long>(std::string m_fieldName, std::vector<long> m_value);
+    template void EpicsProxy::write_pv_array<unsigned long>(std::string m_fieldName, std::vector<unsigned long> m_value);
 }
