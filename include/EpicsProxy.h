@@ -6,6 +6,8 @@
 #include <any>
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
+#include <algorithm>
 
 #include <cadef.h>
 #include <db_access.h>
@@ -108,6 +110,10 @@ public:
     TypeValue read_pv(std::string m_fieldName, bool pend = true);
     
     std::string read_pv_string(std::string m_fieldName, bool pend = true);
+
+    template<typename TypeValue>
+    std::vector<TypeValue> read_pv_array(std::string m_fieldName, bool pend = true);
+
 };
 }
 #endif

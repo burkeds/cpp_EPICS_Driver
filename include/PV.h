@@ -35,6 +35,9 @@ class PV {
     TypeValue _get(bool pend = true);
     std::string _get_string(bool pend = true);
 
+    template<typename TypeValue>
+    std::vector<TypeValue> _get_array(bool pend = true);
+
     //Writing PVs
     template<typename TypeValue>
     void _put(TypeValue value, bool pend = true);
@@ -55,7 +58,11 @@ class PV {
     //Read
     template<typename TypeValue>
     TypeValue read(bool pend = true);
+
     std::string read_string(bool pend = true);
+
+    template<typename TypeValue>
+    std::vector<TypeValue> read_array(bool pend = true);
 
     //Write PVs
     template<typename TypeValue>

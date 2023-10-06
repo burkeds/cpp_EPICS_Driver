@@ -6,8 +6,6 @@
 
 #include "PV.h"
 #include <unistd.h>
-#include <limits.h>
-#include <boost/asio/ip/host_name.hpp>
 
 namespace epics {
 
@@ -48,9 +46,14 @@ std::string PV::read_string(bool pend) {
 }
 
 template<typename TypeValue>
+std::vector<TypeValue> PV::read_array(bool pend) {
+    std::vector<TypeValue> value = _get_array<TypeValue>(pend);
+    return value;
+}
+
+template<typename TypeValue>
 TypeValue PV::_get(bool pend) {
     TypeValue pval;
-    //If the field name is .MSTA
     SEVCHK(ca_get(ca_field_type(channel), channel, &pval), ("Failed to get value from PV " + pvName).c_str());
     if (pend) {    
         SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
@@ -65,6 +68,23 @@ std::string PV::_get_string(bool pend) {
         SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
     }
     return std::string(static_cast<const char*>(pValue));
+}
+
+template<typename TypeValue>
+std::vector<TypeValue> PV::_get_array(bool pend) {
+    long element_count = ca_element_count(channel);
+    chtype field_type = ca_field_type(channel);
+    TypeValue* array = new TypeValue[element_count];
+    std::vector<TypeValue> pval;
+    SEVCHK(ca_array_get(field_type, element_count, channel, array), ("Failed to get value from PV " + pvName).c_str());
+    if (pend) {    
+        SEVCHK(ca_pend_io(5.0), ("Failed to get value from PV " + pvName).c_str());
+    }
+    std::size_t size = static_cast<std::size_t>(element_count);
+    pval.resize(size);
+    std::copy(array, array + size, pval.begin());
+    delete[] array;
+    return pval;
 }
 
 template<typename TypeValue>
@@ -106,6 +126,14 @@ template short PV::read<short>(bool pend);
 template char PV::read<char>(bool pend);
 template long PV::read<long>(bool pend);
 template unsigned long PV::read<unsigned long>(bool pend);
+
+template std::vector<double> PV::read_array<double>(bool pend);
+template std::vector<float> PV::read_array<float>(bool pend);
+template std::vector<int> PV::read_array<int>(bool pend);
+template std::vector<short> PV::read_array<short>(bool pend);
+template std::vector<char> PV::read_array<char>(bool pend);
+template std::vector<long> PV::read_array<long>(bool pend);
+template std::vector<unsigned long> PV::read_array<unsigned long>(bool pend);
 
 template void PV::write<double>(double newValue, bool pend);
 template void PV::write<float>(float newValue, bool pend);

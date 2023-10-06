@@ -129,6 +129,16 @@ std::string EpicsProxy::read_pv_string(std::string m_fieldName, bool pend) {
     throw std::runtime_error("PV " + m_fieldName + " not found");
 }
 
+template<typename TypeValue>
+std::vector<TypeValue> EpicsProxy::read_pv_array(std::string m_fieldName, bool pend) {
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            return m_pv->read_array<TypeValue>(pend);
+        }
+    }
+    throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
 //Instantiate the template function for allowed types
     template double EpicsProxy::read_pv<double>(std::string m_fieldName, bool pend);
     template float EpicsProxy::read_pv<float>(std::string m_fieldName, bool pend);
@@ -137,6 +147,14 @@ std::string EpicsProxy::read_pv_string(std::string m_fieldName, bool pend) {
     template char EpicsProxy::read_pv<char>(std::string m_fieldName, bool pend);
     template long EpicsProxy::read_pv<long>(std::string m_fieldName, bool pend);
     template unsigned long EpicsProxy::read_pv<unsigned long>(std::string m_fieldName, bool pend);
+
+    template std::vector<double> EpicsProxy::read_pv_array<double>(std::string m_fieldName, bool pend);
+    template std::vector<float> EpicsProxy::read_pv_array<float>(std::string m_fieldName, bool pend);
+    template std::vector<int> EpicsProxy::read_pv_array<int>(std::string m_fieldName, bool pend);
+    template std::vector<short> EpicsProxy::read_pv_array<short>(std::string m_fieldName, bool pend);
+    template std::vector<char> EpicsProxy::read_pv_array<char>(std::string m_fieldName, bool pend);
+    template std::vector<long> EpicsProxy::read_pv_array<long>(std::string m_fieldName, bool pend);
+    template std::vector<unsigned long> EpicsProxy::read_pv_array<unsigned long>(std::string m_fieldName, bool pend);
 
     template void EpicsProxy::write_pv<double>(std::string m_fieldName, double m_value, bool pend);
     template void EpicsProxy::write_pv<float>(std::string m_fieldName, float m_value, bool pend);
