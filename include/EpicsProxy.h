@@ -37,10 +37,24 @@ struct caConfig {
     const char* ts_min_west;
 };
 
+class caContext {
+    private:
+    struct ca_client_context* context = nullptr;
+    public:
+    caContext() {
+        SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
+        context = ca_current_context();
+    }
+    ~caContext() {
+        ca_context_destroy();
+    }
+    struct ca_client_context* get_context() {return context;};
+};
+
 class EpicsProxy {
     //Class Variables
 private:
-    struct ca_client_context *context = nullptr;
+    caContext* caContext_ptr = nullptr;
     std::string error;
     std::string deviceName;
     std::vector<PV*> pvList;
@@ -66,7 +80,6 @@ public:
     
     void set_status_pv(std::string m_statusPV) {statusPV = m_statusPV;};
     void set_current_status(unsigned long m_currentStatus) {currentStatus = m_currentStatus;};
-    
 
     // Create PVs
     PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
@@ -76,7 +89,10 @@ public:
     std::string get_axis_name() {return axisName;};
     std::vector<short> get_allowed_types() {return allowed_types;};
     unsigned long get_current_status() {return currentStatus;};
-    struct ca_client_context* get_context() {return context;};
+    
+    //Manage the ca context
+    struct ca_client_context* get_context() {return caContext_ptr->get_context();};
+    void destroy_context() {delete caContext_ptr;};
 
 
     void add_monitor(std::string m_fieldName, EpicsProxy* proxy, void (*callback)(struct event_handler_args args));

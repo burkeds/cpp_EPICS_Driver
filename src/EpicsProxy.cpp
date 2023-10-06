@@ -40,9 +40,7 @@ void EpicsProxy::init(std::string m_deviceName,
     setenv("EPICS_CA_MAX_ARRAY_BYTES", m_caConfig.ca_max_array_bytes, 1);
     setenv("EPICS_TS_MIN_WEST", m_caConfig.ts_min_west, 1);
 
-    //Initialize the EPICS context and assign a pointer to the context
-    SEVCHK(ca_context_create(ca_enable_preemptive_callback), "Failed to create EPICS context");
-    context = ca_current_context();
+    caContext_ptr = new caContext();
     //Set the device name
     deviceName = m_deviceName;
 
@@ -53,6 +51,7 @@ void EpicsProxy::init(std::string m_deviceName,
     }
     ca_pend_io(5.0);
 }
+
 EpicsProxy::EpicsProxy(std::string name) {
     //Set the device name
     axisName = name;
@@ -66,7 +65,7 @@ EpicsProxy::~EpicsProxy() {
     pvList.clear();
 
     //Destroy the EPICS context
-    ca_context_destroy();
+    destroy_context();
 }
 
 void EpicsProxy::add_monitor(std::string m_fieldName, EpicsProxy* proxy, void (*callback)(struct event_handler_args args)) {
