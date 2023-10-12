@@ -11,8 +11,8 @@
  *  communication with the PVs.
  *
  * Values read from PVs are returned as std::any objects and must be appropriately cast to the desired
- *  type. Values written to PVs must be of a valid type. The allowed data types are: double('t'),
- *  float('f'), enum('t'), short('s'), char('h'), string('A40_c'), long('l')
+ *  type. Values written to PVs must be of a valid type. The allowed data types are: double,
+ *  float, enum, short, char, string, long, and unsigned long.
  * 
  * @note The allowed data types are: double, float, enum, short, char, string('A40_c'), long, and unsigned long
  * @note The EpicsProxy class requires the EPICS library to be installed on the system and linked with the application.
@@ -67,6 +67,12 @@ EpicsProxy::~EpicsProxy() {
     destroy_context();
 }
 
+PV* EpicsProxy::create_PV(std::string m_fullName) {
+        PV* m_pv = new PV("", m_fullName);
+        pvList.push_back(m_pv);
+        return pvList.back();
+    }
+
 void EpicsProxy::add_monitor(std::string m_fieldName, EpicsProxy* proxy, void (*callback)(struct event_handler_args args)) {
     for (PV* m_pv : pvList) {
         if (m_pv->get_name() == m_fieldName) {
@@ -85,6 +91,29 @@ void EpicsProxy::remove_monitor(std::string m_fieldName) {
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
+void EpicsProxy::write_pv(std::string m_fieldName, std::string type, std::any m_value) {
+    //Check that the type is allowed and use the appropriate write function
+    if (type == "double") {
+        write_pv<double>(m_fieldName, std::any_cast<double>(m_value));
+    } else if (type == "float") {
+        write_pv<float>(m_fieldName, std::any_cast<float>(m_value));
+    } else if (type == "enum") {
+        write_pv<int>(m_fieldName, std::any_cast<int>(m_value));
+    } else if (type == "short") {
+        write_pv<short>(m_fieldName, std::any_cast<short>(m_value));
+    } else if (type == "char") {
+        write_pv<char>(m_fieldName, std::any_cast<char>(m_value));
+    } else if (type == "string") {
+        write_pv_string(m_fieldName, std::any_cast<std::string>(m_value));
+    } else if (type == "long") {
+        write_pv<long>(m_fieldName, std::any_cast<long>(m_value));
+    } else if (type == "unsigned long") {
+        write_pv<unsigned long>(m_fieldName, std::any_cast<unsigned long>(m_value));
+    } else {
+        throw std::runtime_error("Invalid type: " + type);
+    }
 }
 
 
@@ -118,6 +147,58 @@ void EpicsProxy::write_pv_array(std::string m_fieldName, std::vector<TypeValue> 
         }
     }
     throw std::runtime_error("PV " + m_fieldName + " not found");
+}
+
+std::any EpicsProxy::read_pv(std::string m_fieldName, std::string type, bool as_string) {
+    //Check that the type is allowed and use the appropriate read function
+    //If as_string is true, return as string
+    if (type == "double") {
+        if (as_string) {
+            return std::to_string(read_pv<double>(m_fieldName));
+        } else {
+            return read_pv<double>(m_fieldName);
+        }
+    } else if (type == "float") {
+        if (as_string) {
+            return std::to_string(read_pv<float>(m_fieldName));
+        } else {
+            return read_pv<float>(m_fieldName);
+        }
+    } else if (type == "enum") {
+        if (as_string) {
+            return std::to_string(read_pv<int>(m_fieldName));
+        } else {
+            return read_pv<int>(m_fieldName);
+        }
+    } else if (type == "short") {
+        if (as_string) {
+            return std::to_string(read_pv<short>(m_fieldName));
+        } else {
+            return read_pv<short>(m_fieldName);
+        }
+    } else if (type == "char") {
+        if (as_string) {
+            return std::to_string(read_pv<char>(m_fieldName));
+        } else {
+            return read_pv<char>(m_fieldName);
+        }
+    } else if (type == "string") {
+        return read_pv_string(m_fieldName);
+    } else if (type == "long") {
+        if (as_string) {
+            return std::to_string(read_pv<long>(m_fieldName));
+        } else {
+            return read_pv<long>(m_fieldName);
+        }
+    } else if (type == "unsigned long") {
+        if (as_string) {
+            return std::to_string(read_pv<unsigned long>(m_fieldName));
+        } else {
+            return read_pv<unsigned long>(m_fieldName);
+        }
+    } else {
+        throw std::runtime_error("Invalid type: " + type);
+    }
 }
 
 template<typename TypeValue>

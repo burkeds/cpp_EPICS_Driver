@@ -84,7 +84,7 @@ public:
     void set_current_status(unsigned long m_currentStatus) {currentStatus = m_currentStatus;};
 
     // Create PVs
-    PV create_PV(std::string m_partialName) {return PV(deviceName, m_partialName);};
+    PV* create_PV(std::string m_fullName);
 
     //Access functions
     std::string get_device_name() {return deviceName;};
@@ -101,6 +101,8 @@ public:
     void remove_monitor(std::string m_fieldName);
 
     //Read and write functions
+    void write_pv(std::string m_fieldName, std::string type, std::any m_value);
+
     template<typename TypeValue>
     void write_pv(std::string m_fieldName, TypeValue m_value);
     
@@ -108,6 +110,8 @@ public:
 
     template<typename TypeValue>
     void write_pv_array(std::string m_fieldName, std::vector<TypeValue> m_value);
+
+    std::any read_pv(std::string m_fieldName, std::string type, bool as_string = false);
 
     template<typename TypeValue>
     TypeValue read_pv(std::string m_fieldName);
