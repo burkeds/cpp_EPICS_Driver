@@ -116,6 +116,39 @@ void EpicsProxy::write_pv(std::string m_fieldName, std::string type, std::any m_
     }
 }
 
+void EpicsProxy::write_pv(std::string m_fieldName, std::string m_value) {
+    //Check to see if the PV exists and get the field type
+    chtype field_type = NULL;
+    for (PV* m_pv : pvList) {
+        if (m_pv->get_name() == m_fieldName) {
+            field_type = m_pv->get_field_type();
+            break;
+        }
+    }
+    //Throw exception if field_type is NULL
+    if (field_type == NULL) {
+        throw std::runtime_error("PV " + m_fieldName + " not found");
+    }
+    //Cast m_value and call the appropriate write function based on the field type
+    if (field_type == DBR_DOUBLE) {
+        write_pv<double>(m_fieldName, std::stod(m_value));
+    } else if (field_type == DBR_FLOAT) {
+        write_pv<float>(m_fieldName, std::stof(m_value));
+    } else if (field_type == DBR_ENUM) {
+        write_pv<int>(m_fieldName, std::stoi(m_value));
+    } else if (field_type == DBR_SHORT) {
+        write_pv<short>(m_fieldName, std::stoi(m_value));
+    } else if (field_type == DBR_CHAR) {
+        write_pv<char>(m_fieldName, std::stoi(m_value));
+    } else if (field_type == DBR_STRING) {
+        write_pv_string(m_fieldName, m_value);
+    } else if (field_type == DBR_LONG) {
+        write_pv<long>(m_fieldName, std::stol(m_value));
+    } else {
+        throw std::runtime_error("Invalid CA field type: " + std::to_string(field_type));
+    }
+}
+
 
 template<typename TypeValue>
 void EpicsProxy::write_pv(std::string m_fieldName, TypeValue m_value) {

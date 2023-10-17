@@ -102,6 +102,7 @@ public:
 
     //Read and write functions
     void write_pv(std::string m_fieldName, std::string type, std::any m_value);
+    void write_pv(std::string m_fieldName, std::string m_value);
 
     template<typename TypeValue>
     void write_pv(std::string m_fieldName, TypeValue m_value);

@@ -25,6 +25,10 @@ void PV::clear_channel(){
     _clear_channel();
 }
 
+chtype PV::get_field_type(){
+    return ca_field_type(channel);
+}
+
 template<typename TypeValue>
 void PV::write(TypeValue newValue) {
     _put(newValue);

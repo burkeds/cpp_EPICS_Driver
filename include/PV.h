@@ -29,6 +29,9 @@ class PV {
     //Create and destroy channel
     void _create_channel(bool pend);
     void _clear_channel();
+
+    //PV Status
+    chtype get_field_type();
     
     //Reading PVs
     template<typename TypeValue>
